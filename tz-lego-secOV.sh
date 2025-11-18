@@ -55,13 +55,13 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.5"
+    local_version="1.1.6"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
-    remote_version=$(curl -fsSL "https://raw.githubusercontent.com/janniktaulan/lego-testing/main/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
+    remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
     if [ -z "$remote_version" ]; then
         echo "Error fetching remote version."
         exit 1
@@ -69,7 +69,7 @@ function upkeep() {
     if version_gt "$remote_version" "$local_version"; then
         read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
         if [[ "$update_choice" == "y" ]]; then
-            curl -fsSL "https://raw.githubusercontent.com/janniktaulan/lego-testing/main/tz-lego-secOV.sh" \
+            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-secOV.sh" \
         -o "$SCRIPT_PATH.tmp" || exit 1
 
         mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH"
@@ -585,6 +585,6 @@ function new_cert() {
 }
 
 # Start
-echo "Welcome to TZ-Bot V1.1.5"
+echo "Welcome to TZ-Bot V1.1.6"
 upkeep
 start_prompt

@@ -6,15 +6,15 @@ Depending on the product:
 
 **Sectigo DV:**
 
-sudo curl -L https://github.com/janniktaulan/lego-testing/releases/download/Stable%2FOfficial/tz-lego-secDV.sh > /tmp/tz-bot
+sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-secDV.sh > /tmp/tz-bot
 
 **Sectigo OV:**
 
-sudo curl -L https://github.com/janniktaulan/lego-testing/releases/download/Stable%2FOfficial/tz-lego-secOV.sh > /tmp/tz-bot
+sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-secOV.sh > /tmp/tz-bot
 
 **Globalsign:**
 
-sudo curl -L https://github.com/janniktaulan/lego-testing/releases/download/Stable%2FOfficial/tz-lego.sh > /tmp/tz-bot
+sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego.sh > /tmp/tz-bot
 
 **Then run this command:**
 
