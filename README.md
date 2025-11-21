@@ -3,6 +3,9 @@ Installation guide:
 First, run the following command in your linux terminal:
 
 Depending on the product:
+**COMBINED CA VERSION:**
+
+sudo curl -L sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh > /tmp/tz-bot
 
 **Sectigo DV:**
 
