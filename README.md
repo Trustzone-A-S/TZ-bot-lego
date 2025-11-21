@@ -2,21 +2,21 @@
 
 First, run the following command in your linux terminal:
 
-Depending on the product:
+# Depending on the product:
 
-# COMBINED CA VERSION:
+**COMBINED CA VERSION:**
 
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh > /tmp/tz-bot
 
-# Sectigo DV:
+**Sectigo DV:**
 
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-secDV.sh > /tmp/tz-bot
 
-# Sectigo OV:
+**Sectigo OV:**
 
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-secOV.sh > /tmp/tz-bot
 
-# Globalsign:
+**Globalsign:**
 
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego.sh > /tmp/tz-bot
 
