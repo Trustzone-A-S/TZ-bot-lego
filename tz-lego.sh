@@ -141,11 +141,6 @@ function upkeep() {
     mkdir -p /etc/tz-bot/scripts/
     mkdir -p /etc/tz-bot/certs/
     
-    if ! [ -e "/etc/tz-bot/scripts/.ca" ] ; then
-        touch /etc/tz-bot/scripts/.ca
-        sudo echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
-    fi
-
     if ! [ -e "/etc/tz-bot/scripts/storage" ] ; then
         touch /etc/tz-bot/scripts/storage
     fi
@@ -457,8 +452,7 @@ function start_prompt() {
     echo "1. Order a new certificate"
     echo "2. Renewal Management"
     echo "3. Uninstall TZ-Bot and Lego"
-    echo "4. CA selection"
-    echo "5. Exit"
+    echo "4. Exit"
     read -n 1 -p "Enter choice [1-4]: " initial_choice
     echo
     case $initial_choice in
@@ -485,46 +479,6 @@ function start_prompt() {
             fi
             ;;
         4)
-            echo ""
-            echo "1. Globalsign"
-            echo "2. Sectigo DV"
-            echo "3. Sectigo OV"
-            read -n 1 -p "Enter choice [1-3]: " ca_select_choice
-            case $ca_select_choice in
-                1)
-                    if echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected GlobalSign as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                2)
-                    if echo "selected_ca=https://acme.sectigo.com/v2/DV" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected Sectigo DV as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                3)
-                    if echo "selected_ca=https://acme.sectigo.com/v2/OV" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected Sectigo OV as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                *)
-                    echo "Invalid choice. Exiting."
-                    exit 1
-                    ;;
-            esac
-            ;;
-        5)
             echo "Exiting."
             exit 0
             ;;
@@ -602,8 +556,7 @@ function new_cert() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
     fi
-    . /etc/tz-bot/scripts/.a
-    registration="--server $selected_ca --email test123@test.com -a"
+    registration="--server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a"
 
     #eab var
     eab="--eab --kid "${eab_kid:?}" --hmac "${eab_hmac:?}""
