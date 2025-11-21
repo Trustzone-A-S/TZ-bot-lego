@@ -1,8 +1,6 @@
 # Installation guide:
 
-First, run the following command in your linux terminal:
-
-# Depending on the product:
+First, run the following command in your linux terminal (Depending on the product):
 
 **COMBINED CA VERSION:**
 
