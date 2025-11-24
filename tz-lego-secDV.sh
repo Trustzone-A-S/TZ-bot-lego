@@ -55,7 +55,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.6"
+    local_version="1.1.7"
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {

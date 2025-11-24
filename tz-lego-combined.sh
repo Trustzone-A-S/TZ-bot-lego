@@ -55,7 +55,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.6"
+    local_version="1.1.7"
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
@@ -602,7 +602,7 @@ function new_cert() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
     fi
-    . /etc/tz-bot/scripts/.a
+    . /etc/tz-bot/scripts/.ca
     registration="--server $selected_ca --email test123@test.com -a"
 
     #eab var
