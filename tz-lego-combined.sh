@@ -61,7 +61,7 @@ function upkeep() {
     version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
-}
+    }
     remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
     if [ -z "$remote_version" ]; then
         echo "Error fetching remote version."
@@ -459,7 +459,7 @@ function start_prompt() {
     echo "3. Uninstall TZ-Bot and Lego"
     echo "4. CA selection"
     echo "5. Exit"
-    read -n 1 -p "Enter choice [1-4]: " initial_choice
+    read -n 1 -p "Enter choice [1-5]: " initial_choice
     echo
     case $initial_choice in
         1)
