@@ -93,7 +93,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.8"
+    local_version="1.1.9"
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
@@ -585,7 +585,7 @@ function ordering() {
     if [[ $renewal = yes ]]; then
         echo ""
         echo "Checking for existing renewal"
-        if sudo grep -q -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
+        if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
