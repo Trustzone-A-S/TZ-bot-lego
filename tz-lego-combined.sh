@@ -33,7 +33,45 @@ function cronjob() {
 }
 function auto_reload() {
     echo ""
-    read -p "Please enter your desired reload command: " reload_command
+    echo "What command would you like to use for reloading your webserver upon installation/renewals?"
+    echo "1. sudo systemctl reload $server"
+    echo "2. sudo service reload $server"
+    echo "3. [NGINX ONLY] sudo /etc/init.d/nginx reload"
+    echo "4. [APACHE ONLY] sudo /etc/init.d/apache2 reload"
+    echo "5. Use a custom command"
+    read -n 1 -p "Enter choice [1-5]: " reload_choice
+    case $reload_choice in
+        1)
+            reload_command="sudo systemctl reload $server"
+            echo ""
+            echo "using $reload_command"
+            ;;
+        2)
+            reload_command="sudo service reload $server"
+            echo ""
+            echo "using $reload_command"
+            ;;
+        3)
+            reload_command="sudo /etc/init.d/nginx reload"
+            echo ""
+            echo "using $reload_command"
+            ;;
+        4)
+            reload_command="sudo /etc/init.d/apache2 reload"
+            echo ""
+            echo "using $reload_command"
+            ;;
+        5)
+            echo ""
+            read -p "Enter reload command: " reload_command
+            echo ""
+            echo "using $reload_command"
+            ;;
+        *)
+            echo "Invalid choice, exiting."
+            exit 1
+            ;;
+    esac
     echo "Attempting to reload server using command: $reload_command"
     if sudo $reload_command; then
         echo "Web server reloaded successfully."
@@ -55,7 +93,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.7"
+    local_version="1.1.8"
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
@@ -568,6 +606,29 @@ function new_cert() {
     echo "3: HTTP Validation (Requires port 80 to be open)"
     read -n 1 -p "Enter choice [1-3]: " validation_choice
     echo
+
+    echo "Which web server are you using?"
+    echo "1: Apache"
+    echo "2: Nginx"
+    read -n 1 -p "Enter choice [1-2]: " server_type
+    case $server_type in
+        1)
+            val_var="--apache"
+            server="apache2"
+            echo ""
+            echo "Apache selected"
+            ;;
+        2)
+            val_var="--nginx"
+            server="nginx"
+            echo ""
+            echo "Nginx selected"
+            ;;
+            *)
+            echo "Invalid choice, exiting."
+            exit 1
+            ;;
+    esac
 
     case $validation_choice in
         1)
