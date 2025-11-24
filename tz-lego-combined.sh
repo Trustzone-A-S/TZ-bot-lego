@@ -108,7 +108,7 @@ function upkeep() {
     if version_gt "$remote_version" "$local_version"; then
         read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
         if [[ "$update_choice" == "y" ]]; then
-            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego.sh" \
+            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh" \
         -o "$SCRIPT_PATH.tmp" || exit 1
 
         mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH"
