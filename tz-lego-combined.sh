@@ -93,7 +93,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.1.9"
+    local_version="1.2"
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
@@ -523,44 +523,7 @@ function start_prompt() {
             fi
             ;;
         4)
-            echo ""
-            echo "1. Globalsign"
-            echo "2. Sectigo DV"
-            echo "3. Sectigo OV"
-            read -n 1 -p "Enter choice [1-3]: " ca_select_choice
-            case $ca_select_choice in
-                1)
-                    if echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected GlobalSign as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                2)
-                    if echo "selected_ca=https://acme.sectigo.com/v2/DV" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected Sectigo DV as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                3)
-                    if echo "selected_ca=https://acme.sectigo.com/v2/OV" > /etc/tz-bot/scripts/.ca; then
-                        echo "Selected Sectigo OV as your Certificate Authority"
-                        start_prompt
-                    else
-                        echo "Error selecting CA..."
-                        exit 1
-                    fi
-                    ;;
-                *)
-                    echo "Invalid choice. Exiting."
-                    exit 1
-                    ;;
-            esac
+            ca_selection
             ;;
         5)
             echo "Exiting."
@@ -571,6 +534,38 @@ function start_prompt() {
             exit 1
             ;;
     esac
+}
+function ca_selection() {
+    echo ""
+    echo "1. Globalsign"
+    echo "2. Sectigo DV"
+    echo "3. Sectigo OV"
+    read -n 1 -p "Enter choice [1-3]: " ca_select_choice
+    case $ca_select_choice in
+        1)
+            ca_select="https://emea.acme.atlas.globalsign.com/directory"
+            ca_print="GlobalSign"
+            ;;
+        2)
+            ca_select="https://acme.sectigo.com/v2/DV"
+            ca_print="Sectigo DV"
+            ;;
+        3)
+            ca_select="https://acme.sectigo.com/v2/OV"
+            ca_print="Sectigo OV"
+            ;;
+        *)
+            echo "Invalid choice. Exiting."
+            exit 1
+            ;;
+    esac
+    if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
+        echo "Selected $ca_print as your Certificate Authority"
+        start_prompt
+    else
+        echo "Error selecting CA..."
+        exit 1
+    fi
 }
 function ordering() {
     echo "LEGO command: sudo $lego_var $registration $val_var $path_var $eab $domain_var"
