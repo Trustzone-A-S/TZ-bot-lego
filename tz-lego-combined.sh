@@ -605,7 +605,7 @@ function new_cert() {
     echo "2: DNS validation"
     echo "3: HTTP Validation (Requires port 80 to be open)"
     read -n 1 -p "Enter choice [1-3]: " validation_choice
-    echo
+    echo ""
 
     echo "Which web server are you using?"
     echo "1: Apache"
