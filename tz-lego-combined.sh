@@ -560,9 +560,11 @@ function ca_selection() {
             ;;
     esac
     if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
+        echo ""
         echo "Selected $ca_print as your Certificate Authority"
         start_prompt
     else
+        echo ""
         echo "Error selecting CA..."
         exit 1
     fi
