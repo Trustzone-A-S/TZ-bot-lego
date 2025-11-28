@@ -8,7 +8,7 @@ function cronjob() {
             renewal="yes"
             echo "Selecting automatic renewal"
             # CHANGE THIS LINE \/ IF YOU WANT TO CHANGE THE INTERVAL OF CRONJOB RUNTIME.
-            job='0 8 * * 1 /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
+            job='*/5 * * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
             # CHANGE THIS LINE /\ IF YOU WANT TO CHANGE THE INTERVAL OF CRONJOB RUNTIME.
             # https://crontab.guru/ is a great site for figuring out which values to put in the cronjob
             # make sure to check if the old cronjob entry was removed: "sudo crontab -e"
@@ -70,10 +70,10 @@ function auto_reload() {
     echo "Attempting to reload server using command: $reload_command"
     if sudo $reload_command; then
         echo "Web server reloaded successfully."
-        echo "$reload_command" >> /etc/tz-bot/scripts/renewal_list
-        if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_list"; then
-            sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_list
-            echo "$reload_command" >> /etc/tz-bot/scripts/renewal_list
+        echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+        if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
+            sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
+            echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
         fi
     else
         echo "Failed to reload using: '$reload_command'"
@@ -99,7 +99,7 @@ function upkeep() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
     }
-    remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
+    remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/renew-hook/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
     if [ -z "$remote_version" ]; then
         echo "Error fetching remote version."
         exit 1
@@ -107,7 +107,7 @@ function upkeep() {
     if version_gt "$remote_version" "$local_version"; then
         read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
         if [[ "$update_choice" == "y" ]]; then
-            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh" \
+            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/renew-hook/tz-lego-combined.sh" \
         -o "$SCRIPT_PATH.tmp" || exit 1
 
         mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH"
@@ -210,6 +210,11 @@ function upkeep() {
         touch /etc/tz-bot/scripts/renewal_list
         chmod 600 /etc/tz-bot/scripts/renewal_list
     fi
+
+    if ! [ -e "/etc/tz-bot/scripts/renewal_hook.sh" ] ; then
+        touch /etc/tz-bot/scripts/renewal_hook.sh
+        chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+    fi
     
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ] ; then
         sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
@@ -281,6 +286,9 @@ function renewal_management() {
                             sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
                             echo "Crontab entry removed, since no renewals are left in the script."
                             sudo rm /etc/tz-bot/scripts/renewal_list
+                            sudo rm /etc/tz-bot/scripts/renewal_hook.sh
+                            sudo touch /etc/tz-bot/scripts/renewal_hook.sh
+                            sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
                             sudo touch /etc/tz-bot/scripts/renewal_list
                             chmod 600 /etc/tz-bot/scripts/renewal_list
                         fi
@@ -299,6 +307,9 @@ function renewal_management() {
             read -n 1 -p "Type 'y' to confirm, or 'n' to cancel: " confirm_all_removal
             echo
             if [[ "$confirm_all_removal" = "y" ]]; then
+                sudo rm /etc/tz-bot/scripts/renewal_hook.sh
+                sudo touch /etc/tz-bot/scripts/renewal_hook.sh
+                sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
                 sudo rm /etc/tz-bot/scripts/renewal_list
                 sudo touch /etc/tz-bot/scripts/renewal_list
                 chmod 600 /etc/tz-bot/scripts/renewal_list
@@ -674,10 +685,10 @@ function new_cert() {
     if [[ "$domain" == "*."* ]]; then
         domain_non_wc="${domain#*.}"
         domain_var="--domains "${domain:?}" --domains "${domain_non_wc:?}" --key-type rsa2048 run"
-        domain_renew_var="--domains "${domain:?}" --domains "${domain_non_wc:?}" --key-type rsa2048 renew --days 45"
+        domain_renew_var="--domains "${domain:?}" --domains "${domain_non_wc:?}" --key-type rsa2048 renew --days 45 --renew-hook="/etc/tz-bot/scripts/renewal_hook.sh""
     else
         domain_var="--domains "${domain:?}" --key-type rsa2048 run"
-        domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 45"
+        domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 45 --renew-hook="/etc/tz-bot/scripts/renewal_hook.sh""
     fi
     renewal="no"
     echo 
