@@ -8,7 +8,7 @@ function cronjob() {
             renewal="yes"
             echo "Selecting automatic renewal"
             # CHANGE THIS LINE \/ IF YOU WANT TO CHANGE THE INTERVAL OF CRONJOB RUNTIME.
-            job='*/5 * * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
+            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
             # CHANGE THIS LINE /\ IF YOU WANT TO CHANGE THE INTERVAL OF CRONJOB RUNTIME.
             # https://crontab.guru/ is a great site for figuring out which values to put in the cronjob
             # make sure to check if the old cronjob entry was removed: "sudo crontab -e"
