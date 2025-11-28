@@ -44,28 +44,23 @@ function auto_reload() {
         1)
             reload_command="sudo systemctl reload $server"
             echo ""
-            echo "using $reload_command"
             ;;
         2)
             reload_command="sudo service reload $server"
             echo ""
-            echo "using $reload_command"
             ;;
         3)
             reload_command="sudo /etc/init.d/nginx reload"
             echo ""
-            echo "using $reload_command"
             ;;
         4)
             reload_command="sudo /etc/init.d/apache2 reload"
             echo ""
-            echo "using $reload_command"
             ;;
         5)
             echo ""
             read -p "Enter reload command: " reload_command
             echo ""
-            echo "using $reload_command"
             ;;
         *)
             echo "Invalid choice, exiting."
