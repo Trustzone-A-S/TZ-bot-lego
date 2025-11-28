@@ -93,7 +93,11 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.2"
+    local_version="1.3"
+    if [ "$(id -u)" -ne 0 ]; then
+        echo 'This script must be run by root' >&2
+        exit 1
+    fi
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
     version_gt() {
