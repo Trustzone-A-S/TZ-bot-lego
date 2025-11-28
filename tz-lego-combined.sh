@@ -93,7 +93,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.3"
+    local_version="1.3.1"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -117,7 +117,7 @@ function upkeep() {
 
         mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH"
         chmod +x "$SCRIPT_PATH"
-            echo ""
+            echo 
             echo "Update done! Please run tz-bot again."
             exit 0
         fi
@@ -128,7 +128,7 @@ function upkeep() {
         if sudo mv /tmp/tz-bot /usr/local/bin/tz-bot; then
             sudo chmod +x /usr/local/bin/tz-bot
             sudo mkdir -p /etc/tz-bot
-            echo "TZ-Bot has been installed successfully. You can now run it using the command 'tz-bot' or 'sudo tz-bot'"
+            echo "TZ-Bot has been installed successfully. You can now run it using the command 'sudo tz-bot'"
             exit
         else
             echo ""
@@ -335,8 +335,11 @@ function read_credentials() {
         fi
     fi
     read -p "Please enter your EAB Key ID: " eab_kid
+    echo 
     read -p "Please enter your EAB HMAC Key: " eab_hmac
+    echo 
     read -p "Please enter your domain: " domain
+    echo 
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials
     echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials
     chmod 600 /etc/tz-bot/scripts/.user_credentials
@@ -596,7 +599,7 @@ function ordering() {
             auto_reload
         fi
     fi
-    echo ""
+    echo 
     echo "Your certificate is here: $path"
 }
 function new_cert() {
@@ -606,8 +609,8 @@ function new_cert() {
     echo "2: DNS validation"
     echo "3: HTTP Validation (Requires port 80 to be open)"
     read -n 1 -p "Enter choice [1-3]: " validation_choice
-    echo ""
-
+    
+    echo 
     echo "Which web server are you using?"
     echo "1: Apache"
     echo "2: Nginx"
@@ -616,13 +619,13 @@ function new_cert() {
         1)
             val_var="--apache"
             server="apache2"
-            echo ""
+            echo 
             echo "Apache selected"
             ;;
         2)
             val_var="--nginx"
             server="nginx"
-            echo ""
+            echo 
             echo "Nginx selected"
             ;;
             *)
@@ -635,21 +638,21 @@ function new_cert() {
         1)
             lego_var="lego"
             echo "MODE: Pre-validated"
-            echo
+            echo 
             val_var="--dns manual"
             read_credentials
             ;;
         2)
             lego_var="-E lego"
             echo "MODE: DNS"
-            echo
+            echo 
             read_credentials
             dns_full
             ;;
         3)
             lego_var="lego"
             echo "MODE: HTTP Validation"
-            echo
+            echo 
             val_var="--http --http.webroot /var/www/html/"
             read_credentials
             ;;
@@ -680,12 +683,12 @@ function new_cert() {
         domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 45"
     fi
     renewal="no"
-
+    echo 
     read -n 1 -p "Do you want to specify where the certificate is saved? (y/n): " custom_path_choice
-    echo
+    echo 
     if [[ "$custom_path_choice" == "y" ]]; then
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path
-        echo ""
+        echo 
         echo "Custom path selected: $custom_path"
         echo "path=$custom_path" > /etc/tz-bot/scripts/storage
         . /etc/tz-bot/scripts/storage
