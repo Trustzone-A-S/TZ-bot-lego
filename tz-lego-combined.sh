@@ -93,7 +93,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.3.2"
+    local_version="1.3.3"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -609,14 +609,14 @@ function new_cert() {
     echo "2: DNS validation"
     echo "3: HTTP Validation (Requires port 80 to be open)"
     read -n 1 -p "Enter choice [1-3]: " validation_choice
-    read -r dummy 2>/dev/null
+    read -t 0.01 -n 10000 discard    
     echo 
 
     echo "Which web server are you using?"
     echo "1: Apache"
     echo "2: Nginx"
     read -n 1 -p "Enter choice [1-2]: " server_type
-    read -r dummy 2>/dev/null
+    read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
             val_var="--apache"
