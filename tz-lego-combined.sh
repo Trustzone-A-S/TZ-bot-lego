@@ -14,7 +14,7 @@ function cronjob() {
             # make sure to check if the old cronjob entry was removed: "sudo crontab -e"
             (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
             echo ""
-            read -n 1 -p "Do you want to setup automatic reload of your web server? (This will reload your web server everytime the cronjob runs, regardless of renewals) (y/n): " reload_choice
+            read -n 1 -p "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate) (y/n): " reload_choice
             if [[ "$reload_choice" == "y" ]]; then
                 automatic_restart="yes"
                 echo ""
