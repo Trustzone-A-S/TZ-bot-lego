@@ -67,6 +67,7 @@ function auto_reload() {
             exit 1
             ;;
     esac
+    echo ""
     echo "Attempting to reload server using command: $reload_command"
     if sudo $reload_command; then
         echo "Web server reloaded successfully."
@@ -616,8 +617,8 @@ function new_cert() {
     echo "3: HTTP Validation (Requires port 80 to be open)"
     read -n 1 -p "Enter choice [1-3]: " validation_choice
     read -t 0.01 -n 10000 discard    
-    echo 
-
+    echo ""
+    echo ""
     echo "Which web server are you using?"
     echo "1: Apache"
     echo "2: Nginx"
@@ -628,12 +629,14 @@ function new_cert() {
             val_var="--apache"
             server="apache2"
             echo 
+            echo ""
             echo "Apache selected"
             ;;
         2)
             val_var="--nginx"
             server="nginx"
             echo 
+            echo ""
             echo "Nginx selected"
             ;;
             *)
