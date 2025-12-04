@@ -67,7 +67,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.3.5"
+    local_version="1.3.6"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -523,8 +523,7 @@ function ordering() {
 function new_cert() {
     # Prompt for validation method
     echo -e "How do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
-    #read -t 0.01 -n 10000 discard    
-    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
+    echo -e "\n\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
@@ -579,7 +578,6 @@ function new_cert() {
         domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
-    echo ""
     read -n 1 -p "Do you want to specify where the certificate is saved? (y/n): " custom_path_choice
     if [[ "$custom_path_choice" == "y" ]]; then
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
