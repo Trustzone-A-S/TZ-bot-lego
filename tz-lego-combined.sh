@@ -67,7 +67,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.3.7"
+    local_version="1.3.8"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -287,7 +287,7 @@ function renewal_management() {
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
     read -n 1 -p "Do you want to reuse saved EAB credentials? (y/n): " reuse_eab
-    echo -e "\n\n"
+    echo -e "\n"
         if [[ "$reuse_eab" == "y" ]]; then
             read -p "Please enter your domain: " domain
             echo
@@ -528,11 +528,11 @@ function new_cert() {
     case $server_type in
         1)
             val_var="--apache" && server="apache2"
-            echo -e "\n\nApache selected"
+            echo -e "\nApache selected"
             ;;
         2)
             val_var="--nginx" && server="nginx"
-            echo -e "\n\nNginx selected"
+            echo -e "\nNginx selected"
             ;;
         *)
             echo "Invalid choice, exiting."
