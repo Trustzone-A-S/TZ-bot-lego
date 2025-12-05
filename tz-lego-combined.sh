@@ -21,7 +21,7 @@ function cronjob() {
     fi
 }
 function auto_reload() {
-    echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. sudo systemctl reload $server\n2. sudo service reload $server\n3. [NGINX ONLY] sudo /etc/init.d/nginx reload\n4. [APACHE ONLY] sudo /etc/init.d/apache2 reload\n5. Use a custom command"
+    echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. sudo systemctl reload $server\n2. sudo service $server reload\n3. [NGINX ONLY] sudo /etc/init.d/nginx reload\n4. [APACHE ONLY] sudo /etc/init.d/apache2 reload\n5. Use a custom command"
     read -n 1 -p "Enter choice [1-5]: " reload_choice
     case $reload_choice in
         1)
@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.3.9"
+    local_version="1.4"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
