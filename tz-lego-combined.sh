@@ -174,9 +174,26 @@ function upkeep() {
         chmod 600 /etc/tz-bot/scripts/renewal.sh
         sudo chmod +x /etc/tz-bot/scripts/renewal.sh
     fi
+    if ! [ -e "/etc/tz-bot/scripts/renewal_force.sh" ] ; then
+        sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sed 's/--days 30/--days 400/' renew_temp.sh
+        sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        chmod 600 /etc/tz-bot/scripts/renewal_force.sh
+        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
+    fi
 }
 function renewal_management() {
-    echo -e "\nRenewal management:\n1. List renewals\n2. Force renew all certificates\n3. Remove a cronjob renewal\n4. Remove all cronjob renewals\n5. Back to main menu"
+    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Remove a cronjob renewal\n5. Remove all cronjob renewals\n6. Back to main menu"
     read -n 1 -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
@@ -195,6 +212,11 @@ function renewal_management() {
             renewal_management
             ;;
         3)
+            echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
+            sudo bash /etc/tz-bot/scripts/renewal_force.sh
+            renewal_management
+            ;;
+        4)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
                 echo -e "\nNo renewals found."
                 renewal_management
@@ -231,7 +253,7 @@ function renewal_management() {
                 fi
             fi
             ;;
-        4)
+        5)
             echo "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."
             read -n 1 -p "Type 'y' to confirm, or 'n' to cancel: " confirm_all_removal
             echo
@@ -248,7 +270,7 @@ function renewal_management() {
                 renewal_management
             fi
             ;;
-        5)
+        6)
             start_prompt
             ;;
         *)
