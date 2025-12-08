@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.4.3"
+    local_version="1.4.4"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
