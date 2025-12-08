@@ -262,11 +262,11 @@ function renewal_management() {
                     echo "Only input whole numbers, e.g., '5'"
                     renewal_management
                 fi
-                echo "You selected to remove renewal for domain: $remove_domain"
+                echo "You selected domain number: $remove_domain"
                 read -n 1 -p "Are you sure you want to proceed with the removal? (y/n): " confirm_removal
                 echo
                 if [[ "$confirm_removal" == "y" ]]; then
-                    echo "Removing renewal for domain: $remove_domain"
+                    echo "Removing renewal number: $remove_domain"
                     if sudo sed -i.bak "${remove_domain}d" /etc/tz-bot/scripts/renewal_list; then
                         echo "Renewal removed from renewal script."
                         if sudo grep -q 'sudo lego' /etc/tz-bot/scripts/renewal_list; then
