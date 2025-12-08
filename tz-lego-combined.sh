@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.4.5"
+    local_version="1.4.6"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -191,9 +191,26 @@ function upkeep() {
         chmod 600 /etc/tz-bot/scripts/renewal_force.sh
         sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
     fi
+    if ! [ -e "/etc/tz-bot/scripts/renew_single.sh" ] ; then
+        sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+        chmod 600 /etc/tz-bot/scripts/renew_single.sh
+        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+    fi
 }
 function renewal_management() {
-    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Remove a cronjob renewal\n5. Remove all cronjob renewals\n6. Back to main menu"
+    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back to main menu"
     read -n 1 -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
@@ -221,6 +238,25 @@ function renewal_management() {
                 echo -e "\nNo renewals found."
                 renewal_management
             else
+                echo -e "\nCurrent cronjob renewals:"
+                awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
+            fi
+            read -p "Please enter the NUMBER of the renewal you want to run: " renew_single
+            if ! [[ "$renew_single" =~ ^[0-9]+$ ]]; then
+                echo "Only input whole numbers, e.g., '5'"
+                renewal_management
+            fi
+            sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
+            sudo bash /etc/tz-bot/scripts/renew_single.sh
+            sudo rm -rf /etc/tz-bot/scripts/renew_single_list
+            ;;
+        5)
+            if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
+                echo -e "\nNo renewals found."
+                renewal_management
+            else
+                echo -e "\nCurrent cronjob renewals:"
+                awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
                 read -p "Please enter the NUMBER of the renewal you want to remove: " remove_domain
                 if ! [[ "$remove_domain" =~ ^[0-9]+$ ]]; then
                     echo "Only input whole numbers, e.g., '5'"
@@ -253,7 +289,7 @@ function renewal_management() {
                 fi
             fi
             ;;
-        5)
+        6)
             echo "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."
             read -n 1 -p "Type 'y' to confirm, or 'n' to cancel: " confirm_all_removal
             echo
@@ -270,7 +306,7 @@ function renewal_management() {
                 renewal_management
             fi
             ;;
-        6)
+        7)
             start_prompt
             ;;
         *)
