@@ -504,7 +504,6 @@ function ordering() {
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "How do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
     echo -e "\n\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
@@ -520,6 +519,7 @@ function new_cert() {
             ;;
     esac
 
+    echo -e "How do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
     case $validation_choice in
         1)
             lego_var="lego" && val_var="--dns manual" && echo -e "MODE: Pre-validated\n" && read_credentials
