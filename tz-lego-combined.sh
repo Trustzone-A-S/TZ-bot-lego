@@ -544,10 +544,10 @@ function new_cert() {
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
-            val_var="--apache" && server="apache2" && echo -e "\nApache selected"
+            val_var="--apache" && server="apache2" && echo -e "\n\nApache selected"
             ;;
         2)
-            val_var="--nginx" && server="nginx" && echo -e "\nNginx selected"
+            val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
             ;;
         *)
             echo "Invalid choice, exiting."
@@ -555,13 +555,13 @@ function new_cert() {
             ;;
     esac
 
-    echo -e "How do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+    echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
     case $validation_choice in
         1)
-            lego_var="lego" && val_var="--dns manual" && echo -e "MODE: Pre-validated\n" && read_credentials
+            lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
             ;;
         2)
-            lego_var="-E lego" && echo -e "MODE: DNS\n" && read_credentials && dns_full
+            lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
             ;;
         3)
             lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
