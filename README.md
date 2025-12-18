@@ -15,6 +15,8 @@ sudo tz-bot
 TZ-Bot only works with an ACME Pro license from TRUSTZONE.
 Using TZ-Bot, you can easily order certificates, and set up automation. TZ-Bot has a built in renewal management menu, as well as Pre-validation, HTTP- and DNS-validation support.
 
+After ordering your certificate, simply change your server's configuration ONCE, to use the certificate. Upon renewal, the certificate will have the same name and path, meaning no further changes are needed. If you also decide to use TZ-Bot's automatic reload, your webserver will be reloaded every time a certificate is renewed, automatically picking up the new certificate.
+
 If you want a specific DNS provider to be added, please reach out to support@trustzone.com.
 
 # Uninstallation:
