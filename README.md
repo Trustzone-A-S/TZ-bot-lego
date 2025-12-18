@@ -8,7 +8,7 @@ sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz
 
 To run TZ-Bot:
 ```bash
-"sudo tz-bot"
+sudo tz-bot
 ``` 
 
 # Uninstallation:
