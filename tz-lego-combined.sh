@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.4.6"
+    local_version="1.4.7"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -540,7 +540,7 @@ function ordering() {
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "\n\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
+    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
@@ -554,23 +554,39 @@ function new_cert() {
             exit 1
             ;;
     esac
-
-    echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
-    case $validation_choice in
-        1)
-            lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
-            ;;
-        2)
-            lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
-            ;;
-        3)
-            lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
-            ;;
-        *)
-            echo "Invalid choice. Exiting."
-            exit 1
-            ;;
-    esac
+if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
+    if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
+        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+        case $validation_choice in
+            1)
+                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
+                ;;
+            2)
+                lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                ;;
+            3)
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                ;;
+            *)
+                echo "Invalid choice. Exiting."
+                exit 1
+                ;;
+        esac
+    else
+        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+        case $validation_choice in
+            1)
+                lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                ;;
+            2)
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                ;;
+            *)
+                echo "Invalid choice. Exiting."
+                exit 1
+                ;;
+        esac
+    fi
 
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
