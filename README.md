@@ -19,6 +19,8 @@ After ordering your certificate, simply change your server's configuration ONCE,
 
 If you want a specific DNS provider to be added, please reach out to support@trustzone.com.
 
+Relevant knowledge material can be found here: https://trustzone.com/guides/acme-pro-guides/ - Look for guides labeled "ACME Pro" (With either Nginx or Apache @Linux)
+
 # Uninstallation:
 Can be done from TZ-bot main menu.
 
