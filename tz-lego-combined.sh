@@ -554,7 +554,7 @@ function new_cert() {
             exit 1
             ;;
     esac
-if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
+
     if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
         echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
@@ -573,7 +573,7 @@ if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
                 ;;
         esac
     else
-        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-2]: " validation_choice
         case $validation_choice in
             1)
                 lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
