@@ -27,3 +27,8 @@ sudo rm -rf /etc/tz-bot/ && sudo rm -rf /usr/local/bin/lego && sudo rm -rf /usr/
 ```
 
 This SHOULD uninstall everything TZ-bot created/installed. Certs created on a custom path will remain. Any certs still placed in the default path will be removed.
+
+If you set up automation, you will need to remove the cronjob as well by using this command:
+```bash
+sudo crontab -e
+```
