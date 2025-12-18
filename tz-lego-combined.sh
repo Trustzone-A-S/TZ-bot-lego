@@ -40,7 +40,7 @@ function auto_reload() {
             echo "" && read -p "Enter reload command: " reload_command && echo ""
             ;;
         *)
-            echo "Invalid choice, exiting."
+            echo -e "\nInvalid choice, exiting."
             exit 1
             ;;
     esac
@@ -310,7 +310,7 @@ function renewal_management() {
             start_prompt
             ;;
         *)
-            echo "Invalid choice. Exiting."
+            echo -e "\nInvalid choice. Exiting."
             exit 1
             ;;
     esac
@@ -413,7 +413,7 @@ function dns_full() {
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
         *)
-            echo "Invalid choice. Exiting."
+            echo -e "\nInvalid choice. Exiting."
             exit 1
             ;;
     esac
@@ -488,7 +488,7 @@ function start_prompt() {
             exit 0
             ;;
         *)
-            echo "Invalid choice. Exiting."
+            echo -e "\nInvalid choice. Exiting."
             exit 1
             ;;
     esac
@@ -506,7 +506,7 @@ function ca_selection() {
             ca_select="https://acme.sectigo.com/v2/OV" && ca_print="Sectigo OV"
             ;;
         *)
-            echo "Invalid choice. Exiting."
+            echo -e "\nInvalid choice. Exiting."
             exit 1
             ;;
     esac
@@ -550,7 +550,7 @@ function new_cert() {
             val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
             ;;
         *)
-            echo "Invalid choice, exiting."
+            echo -e "\nInvalid choice, exiting."
             exit 1
             ;;
     esac
@@ -568,7 +568,7 @@ if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
                 lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
                 ;;
             *)
-                echo "Invalid choice. Exiting."
+                echo -e "\nInvalid choice. Exiting."
                 exit 1
                 ;;
         esac
@@ -582,7 +582,7 @@ if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
                 lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
                 ;;
             *)
-                echo "Invalid choice. Exiting."
+                echo -e "\nInvalid choice. Exiting."
                 exit 1
                 ;;
         esac
