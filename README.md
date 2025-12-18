@@ -6,7 +6,10 @@ First, run the following command in your linux terminal to download and install 
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh > /tmp/tz-bot && sudo bash /tmp/tz-bot
 ```
 
-Then you can run "sudo tz-bot" to use the client.
+To run TZ-Bot:
+```bash
+"sudo tz-bot"
+``` 
 
 # Uninstallation:
 Can be done from TZ-bot main menu.
