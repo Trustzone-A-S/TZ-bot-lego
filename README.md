@@ -3,12 +3,16 @@
 First, run the following command in your linux terminal:
 
 
+```bash
 sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh > /tmp/tz-bot
+```
 
 
 # Then run this command:
 
+```bash
 sudo bash /tmp/tz-bot
+```
 
 # Uninstallation:
 Can be done from TZ-bot main menu.
