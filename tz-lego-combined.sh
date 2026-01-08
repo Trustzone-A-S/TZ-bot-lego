@@ -210,7 +210,7 @@ function upkeep() {
     fi
 }
 function renewal_management() {
-    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back to main menu"
+    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
     read -n 1 -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
@@ -307,7 +307,7 @@ function renewal_management() {
             fi
             ;;
         7)
-            start_prompt
+            cert_menu
             ;;
         *)
             echo -e "\nInvalid choice. Exiting."
@@ -457,7 +457,7 @@ function uninstall() {
     fi
 }
 function cert_menu() {
-    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
+    echo -e "\nCertificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
     read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
     case $cert_menu_choice in
         1)
@@ -468,6 +468,7 @@ function cert_menu() {
             renewal_management
             ;;
         3)
+            echo -e "\n"
             start_prompt
             ;;
         *)
@@ -477,7 +478,7 @@ function cert_menu() {
     esac
 }
 function settings_menu() {
-    echo -e "\nOptions:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
+    echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
     read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
     case $settings_menu_choice in
         1)
@@ -491,13 +492,13 @@ function settings_menu() {
                 uninstall
             else
                 echo -e "\nUninstallation cancelled."
-                start_prompt
+                settings_menu
             fi
             ;;
         3)
             echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
-            start_prompt
+            settings_menu
             ;;
         4)
             start_prompt
@@ -509,7 +510,7 @@ function settings_menu() {
     esac
 }
 function start_prompt() {
-    echo -e "\nOptions:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
+    echo -e "\nMain Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
     read -n 1 -p "Enter choice [1-3]: " initial_choice
     echo
     case $initial_choice in
@@ -547,7 +548,7 @@ function ca_selection() {
             ;;
     esac
     if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
-        echo -e "\nSelected $ca_print as your Certificate Authority" && start_prompt
+        echo -e "\nSelected $ca_print as your Certificate Authority" && settings_menu
     else
         echo -e "\nError selecting CA..."
         exit 1
@@ -649,7 +650,7 @@ function new_cert() {
         path_var="--path $path"
     fi
     ordering
-    start_prompt
+    cert_menu
 }
 
 upkeep
