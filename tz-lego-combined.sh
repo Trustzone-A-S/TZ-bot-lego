@@ -458,7 +458,7 @@ function uninstall() {
 }
 function start_prompt() {
     echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Uninstall TZ-Bot and Lego\n4. CA selection\n5. Help\n6. Exit"
-    read -n 1 -p "Enter choice [1-5]: " initial_choice
+    read -n 1 -p "Enter choice [1-6]: " initial_choice
     echo
     case $initial_choice in
         1)
