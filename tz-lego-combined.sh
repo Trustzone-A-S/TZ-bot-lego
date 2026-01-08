@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.4.8"
+    local_version="1.4.9"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -484,7 +484,7 @@ function start_prompt() {
             ca_selection
             ;;
         5)
-            echo "For support, feature requests and other inquiries, please contact TZ support at the following email address:"
+            echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             start_prompt
             ;;
