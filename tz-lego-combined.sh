@@ -456,21 +456,34 @@ function uninstall() {
         exit
     fi
 }
-function start_prompt() {
-    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Uninstall TZ-Bot and Lego\n4. CA selection\n5. Help\n6. Exit"
-    read -n 1 -p "Enter choice [1-6]: " initial_choice
-    echo
-    case $initial_choice in
+function cert_menu() {
+    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
+    read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
+    case $cert_menu_choice in
         1)
-            echo -e "\nYou selected to order a new certificate."
             new_cert
             echo
             ;;
-            
         2)
             renewal_management
             ;;
         3)
+            start_prompt_new
+            ;;
+        *)
+            echo -e "\nInvalid choice. Exiting."
+            exit 1
+            ;;
+    esac
+}
+function settings_menu() {
+    echo -e "\nOptions:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
+    read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
+    case $settings_menu_choice in
+        1)
+            ca_selection
+            ;;
+        2)
             echo -e "\nYou selected to uninstall TZ-Bot and Lego."
             read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
             if [[ "$confirm_uninstall" == "y" ]]; then
@@ -481,15 +494,32 @@ function start_prompt() {
                 start_prompt
             fi
             ;;
-        4)
-            ca_selection
-            ;;
-        5)
+        3)
             echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             start_prompt
             ;;
-        6)
+        4)
+            start_prompt_new
+            ;;
+        *)
+            echo -e "\nInvalid choice. Exiting."
+            exit 1
+            ;;
+    esac
+}
+function start_prompt_new() {
+    echo -e "\nOptions:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
+    read -n 1 -p "Enter choice [1-3]: " initial_choice_new
+    echo
+    case $initial_choice_new in
+        1)
+            cert_menu
+            ;;
+        2)
+            settings_menu
+            ;;
+        3)
             echo -e "\nExiting."
             exit 0
             ;;
