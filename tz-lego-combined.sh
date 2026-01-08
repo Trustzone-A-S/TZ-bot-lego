@@ -468,7 +468,7 @@ function cert_menu() {
             renewal_management
             ;;
         3)
-            start_prompt_new
+            start_prompt
             ;;
         *)
             echo -e "\nInvalid choice. Exiting."
@@ -500,7 +500,7 @@ function settings_menu() {
             start_prompt
             ;;
         4)
-            start_prompt_new
+            start_prompt
             ;;
         *)
             echo -e "\nInvalid choice. Exiting."
