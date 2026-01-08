@@ -108,8 +108,14 @@ function upkeep() {
                 exit 1
                 fi
         else
-        echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
-            exit 1
+            echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
+            read -n 1 -p "Do you want to uninstall TZ-Bot? (y/n): " uninstall_tz
+            if [[ "$uninstall_tz" == "y" ]]; then
+                uninstall
+            else
+                echo -e "\nExiting."
+                exit 1
+            fi
         fi
     fi
     cron="true"
