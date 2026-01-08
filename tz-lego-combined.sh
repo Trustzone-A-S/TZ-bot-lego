@@ -76,7 +76,7 @@ function upkeep() {
     remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
     if [ -z "$remote_version" ]; then
         echo "Error fetching remote version."
-        exit 1
+        echo "WARNING: Automatic updates disabled for current session"
     fi
     if version_gt "$remote_version" "$local_version"; then
         read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
@@ -457,7 +457,7 @@ function uninstall() {
     fi
 }
 function start_prompt() {
-    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Uninstall TZ-Bot and Lego\n4. CA selection\n5. Exit"
+    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Uninstall TZ-Bot and Lego\n4. CA selection\n5. Help\n6. Exit"
     read -n 1 -p "Enter choice [1-5]: " initial_choice
     echo
     case $initial_choice in
@@ -484,6 +484,11 @@ function start_prompt() {
             ca_selection
             ;;
         5)
+            echo "For support, feature requests and other inquiries, please contact TZ support at the following email address:"
+            echo "support@trustzone.com"
+            start_prompt
+            ;;
+        6)
             echo -e "\nExiting."
             exit 0
             ;;
