@@ -466,6 +466,7 @@ function start_prompt() {
             new_cert
             echo
             ;;
+            
         2)
             renewal_management
             ;;
