@@ -461,10 +461,12 @@ function cert_menu() {
     read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
     case $cert_menu_choice in
         1)
+            echo -e "\n"
             new_cert
             echo
             ;;
         2)
+            echo -e "\n"
             renewal_management
             ;;
         3)
@@ -482,6 +484,7 @@ function settings_menu() {
     read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
     case $settings_menu_choice in
         1)
+            echo -e "\n"
             ca_selection
             ;;
         2)
@@ -496,7 +499,7 @@ function settings_menu() {
             fi
             ;;
         3)
-            echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
+            echo -e "\n\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             settings_menu
             ;;
