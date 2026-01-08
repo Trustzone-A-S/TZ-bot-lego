@@ -508,11 +508,11 @@ function settings_menu() {
             ;;
     esac
 }
-function start_prompt_new() {
+function start_prompt() {
     echo -e "\nOptions:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
-    read -n 1 -p "Enter choice [1-3]: " initial_choice_new
+    read -n 1 -p "Enter choice [1-3]: " initial_choice
     echo
-    case $initial_choice_new in
+    case $initial_choice in
         1)
             cert_menu
             ;;
