@@ -102,7 +102,7 @@ function upkeep() {
         read -n 1 -p "Do you want TZ-bot to try installing Lego? (y/n): " install_choice
         if [[ "$install_choice" == "y" ]]; then
             echo -e "\nInstalling Lego..."
-            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.27.0/lego_v4.27.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
+            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
             if ! command -v lego >/dev/null 2>&1; then
                 echo -e "\nLego installation failed. Please install Lego manually."
                 exit 1
