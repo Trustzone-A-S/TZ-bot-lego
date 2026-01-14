@@ -442,7 +442,7 @@ function dns_full() {
 }
 function uninstall() {
     echo -e "\nWelcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
-    if ask_yn "Are you sure you want to proceed?"; then
+    if yn_prompt "Are you sure you want to proceed?"; then
         echo "Uninstalling TZ-Bot and Lego..."
         if sudo rm -rf /etc/tz-bot/; then
             echo "removed /etc/tz-bot/ and all contents inside"
