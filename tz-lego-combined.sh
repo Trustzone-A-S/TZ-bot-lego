@@ -510,6 +510,7 @@ function settings_menu() {
             settings_menu
             ;;
         4)
+            echo -e "\n"
             start_prompt
             ;;
         *)
