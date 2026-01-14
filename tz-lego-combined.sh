@@ -22,7 +22,7 @@ function cronjob() {
 }
 function auto_reload() {
     echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. sudo systemctl reload $server\n2. sudo service $server reload\n3. [NGINX ONLY] sudo /etc/init.d/nginx reload\n4. [APACHE ONLY] sudo /etc/init.d/apache2 reload\n5. Use a custom command"
-    read -n 1 -p "Enter choice [1-5]: " reload_choice
+    read -p "Enter choice [1-5]: " reload_choice
     case $reload_choice in
         1)
             reload_command="sudo systemctl reload $server" && echo ""
@@ -217,7 +217,7 @@ function upkeep() {
 }
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
-    read -n 1 -p "Enter choice [1-5]: " renewal_choice
+    read -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
         1)
@@ -341,7 +341,7 @@ function read_credentials() {
 }
 function dns_full() {
     echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox"
-    read -n 1 -p "Enter choice [1-5]: " renewal_choice
+    read -p "Enter choice [1-5]: " renewal_choice
     echo ""
     case $renewal_choice in
         1)
@@ -464,7 +464,7 @@ function uninstall() {
 }
 function cert_menu() {
     echo -e "\nCertificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
-    read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
+    read -p "Enter choice [1-3]: " cert_menu_choice
     case $cert_menu_choice in
         1)
             echo -e "\n"
@@ -487,7 +487,7 @@ function cert_menu() {
 }
 function settings_menu() {
     echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
-    read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
+    read -p "Enter choice [1-3]: " settings_menu_choice
     case $settings_menu_choice in
         1)
             echo -e "\n"
@@ -521,7 +521,7 @@ function settings_menu() {
 }
 function start_prompt() {
     echo -e "\nMain Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
-    read -n 1 -p "Enter choice [1-3]: " initial_choice
+    read -p "Enter choice [1-3]: " initial_choice
     echo
     case $initial_choice in
         1)
@@ -541,7 +541,7 @@ function start_prompt() {
     esac
 }
 function ca_selection() {
-    echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -n 1 -p "Enter choice [1-3]: " ca_select_choice
+    echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -p "Enter choice [1-3]: " ca_select_choice
     case $ca_select_choice in
         1)
             ca_select="https://emea.acme.atlas.globalsign.com/directory" && ca_print="GlobalSign"
@@ -587,7 +587,7 @@ function ordering() {
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
+    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
@@ -603,7 +603,7 @@ function new_cert() {
     esac
 
     if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
-        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
             1)
                 lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
@@ -620,7 +620,7 @@ function new_cert() {
                 ;;
         esac
     else
-        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-2]: " validation_choice
+        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-2]: " validation_choice
         case $validation_choice in
             1)
                 lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
