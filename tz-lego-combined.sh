@@ -62,7 +62,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.4.9"
+    local_version="1.5"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -102,14 +102,20 @@ function upkeep() {
         read -n 1 -p "Do you want TZ-bot to try installing Lego? (y/n): " install_choice
         if [[ "$install_choice" == "y" ]]; then
             echo -e "\nInstalling Lego..."
-            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.27.0/lego_v4.27.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
+            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
             if ! command -v lego >/dev/null 2>&1; then
                 echo -e "\nLego installation failed. Please install Lego manually."
                 exit 1
                 fi
         else
-        echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
-            exit 1
+            echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
+            read -n 1 -p "Do you want to uninstall TZ-Bot? (y/n): " uninstall_tz
+            if [[ "$uninstall_tz" == "y" ]]; then
+                uninstall
+            else
+                echo -e "\nExiting."
+                exit 1
+            fi
         fi
     fi
     cron="true"
@@ -210,7 +216,7 @@ function upkeep() {
     fi
 }
 function renewal_management() {
-    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back to main menu"
+    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
     read -n 1 -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
@@ -307,7 +313,7 @@ function renewal_management() {
             fi
             ;;
         7)
-            start_prompt
+            cert_menu
             ;;
         *)
             echo -e "\nInvalid choice. Exiting."
@@ -456,20 +462,38 @@ function uninstall() {
         exit
     fi
 }
-function start_prompt() {
-    echo -e "\nOptions:\n1. Order a new certificate\n2. Renewal Management\n3. Uninstall TZ-Bot and Lego\n4. CA selection\n5. Help\n6. Exit"
-    read -n 1 -p "Enter choice [1-6]: " initial_choice
-    echo
-    case $initial_choice in
+function cert_menu() {
+    echo -e "\nCertificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
+    read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
+    case $cert_menu_choice in
         1)
-            echo -e "\nYou selected to order a new certificate."
+            echo -e "\n"
             new_cert
             echo
             ;;
         2)
+            echo -e "\n"
             renewal_management
             ;;
         3)
+            echo -e "\n"
+            start_prompt
+            ;;
+        *)
+            echo -e "\nInvalid choice. Exiting."
+            exit 1
+            ;;
+    esac
+}
+function settings_menu() {
+    echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
+    read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
+    case $settings_menu_choice in
+        1)
+            echo -e "\n"
+            ca_selection
+            ;;
+        2)
             echo -e "\nYou selected to uninstall TZ-Bot and Lego."
             read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
             if [[ "$confirm_uninstall" == "y" ]]; then
@@ -477,18 +501,36 @@ function start_prompt() {
                 uninstall
             else
                 echo -e "\nUninstallation cancelled."
-                start_prompt
+                settings_menu
             fi
             ;;
-        4)
-            ca_selection
-            ;;
-        5)
-            echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
+        3)
+            echo -e "\n\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
+            settings_menu
+            ;;
+        4)
+            echo -e "\n"
             start_prompt
             ;;
-        6)
+        *)
+            echo -e "\nInvalid choice. Exiting."
+            exit 1
+            ;;
+    esac
+}
+function start_prompt() {
+    echo -e "\nMain Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
+    read -n 1 -p "Enter choice [1-3]: " initial_choice
+    echo
+    case $initial_choice in
+        1)
+            cert_menu
+            ;;
+        2)
+            settings_menu
+            ;;
+        3)
             echo -e "\nExiting."
             exit 0
             ;;
@@ -516,7 +558,7 @@ function ca_selection() {
             ;;
     esac
     if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
-        echo -e "\nSelected $ca_print as your Certificate Authority" && start_prompt
+        echo -e "\nSelected $ca_print as your Certificate Authority" && settings_menu
     else
         echo -e "\nError selecting CA..."
         exit 1
@@ -618,7 +660,7 @@ function new_cert() {
         path_var="--path $path"
     fi
     ordering
-    start_prompt
+    cert_menu
 }
 
 upkeep
