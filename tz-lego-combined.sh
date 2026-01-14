@@ -215,6 +215,22 @@ function upkeep() {
         sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
     fi
 }
+function yn_prompt() {
+    local prompt="$1"
+    local answer
+
+    while true; do
+        read -n 1 -r -p "$prompt (y/n): " answer
+        echo
+
+        case "$answer" in
+            y|Y) return 0 ;;  # true
+            n|N) return 1 ;;  # false
+            *) echo "Please only input "y" or "n"" ;;
+        esac
+    done
+}
+
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
     read -p "Enter choice [1-5]: " renewal_choice
@@ -426,9 +442,7 @@ function dns_full() {
 }
 function uninstall() {
     echo -e "\nWelcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
-    read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
-    echo
-    if [[ "$confirm_uninstall" == "y" ]]; then
+    if ask_yn "Are you sure you want to proceed?"; then
         echo "Uninstalling TZ-Bot and Lego..."
         if sudo rm -rf /etc/tz-bot/; then
             echo "removed /etc/tz-bot/ and all contents inside"
