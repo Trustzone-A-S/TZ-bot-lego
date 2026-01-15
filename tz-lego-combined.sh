@@ -332,23 +332,19 @@ function renewal_management() {
 }
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
-        if yn_prompt "Do you want to reuse saved EAB credentials?"; then
-            echo -e "\n"
-            read -p "Please enter your domain: " domain
+        if yn_prompt "\nDo you want to reuse saved EAB credentials?"; then
+            read -p "\nPlease enter your domain: " domain
             echo
             return
         fi
     fi
-    read -p "Please enter your EAB Key ID: " eab_kid
-    echo 
+    read -p "\nPlease enter your EAB Key ID: " eab_kid
     read -p "Please enter your EAB HMAC Key: " eab_hmac
-    echo 
     read -p "Please enter your domain: " domain
-    echo 
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
-    echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox"
+    echo -e "Which DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox"
     read -p "Enter choice [1-5]: " renewal_choice
     echo ""
     case $renewal_choice in
@@ -581,15 +577,15 @@ function ordering() {
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "Which web server are you using?\n1: Apache\n2: Nginx" && read -p "Enter choice [1-2]: " server_type
+    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
-            val_var="--apache" && server="apache2" && echo -e "\n\nApache selected"
+            val_var="--apache" && server="apache2" && echo -e "\nApache selected"
             validation
             ;;
         2)
-            val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
+            val_var="--nginx" && server="nginx" && echo -e "\nNginx selected"
             validation
             ;;
         *)
@@ -600,16 +596,19 @@ function new_cert() {
 }
 function validation() {
     if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
-        echo -e "How do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
+        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
+                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated" && read_credentials
+                var_definition
                 ;;
             2)
-                lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
+                var_definition
                 ;;
             3)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "\nMODE: HTTP Validation" && read_credentials
+                var_definition
                 ;;
             *)
                 echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
@@ -620,11 +619,11 @@ function validation() {
         echo -e "How do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-2]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="-E lego" && echo -e "MODE: DNS\n" && read_credentials && dns_full
+                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
                 var_definition
                 ;;
             2)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: \nHTTP Validation" && read_credentials
                 var_definition
                 ;;
             *)
