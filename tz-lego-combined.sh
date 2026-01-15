@@ -230,7 +230,6 @@ function yn_prompt() {
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
     read -p "Enter choice [1-7]: " renewal_choice
-    echo
     case $renewal_choice in
         1)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
