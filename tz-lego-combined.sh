@@ -332,9 +332,9 @@ function renewal_management() {
 }
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
-        if yn_prompt "\nDo you want to reuse saved EAB credentials?"; then
+        echo
+        if yn_prompt "Do you want to reuse saved EAB credentials?"; then
             read -p "Please enter your domain: " domain
-            echo
             return
         fi
     fi
@@ -650,7 +650,8 @@ function var_definition() {
         domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
-    if yn_prompt "\nDo you want to specify where the certificate is saved?"; then
+    echo
+    if yn_prompt "Do you want to specify where the certificate is saved?"; then
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
         echo -e "Custom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
