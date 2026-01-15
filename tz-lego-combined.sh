@@ -1,6 +1,7 @@
 #!/bin/bash
 function cronjob() {
     if cron="true"; then
+        echo
         if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
             echo "Selecting automatic renewal"
@@ -42,7 +43,7 @@ function auto_reload() {
             auto_reload
             ;;
     esac
-    echo "" && echo "Attempting to reload server using command: $reload_command"
+    echo "Attempting to reload server using command: $reload_command"
     if sudo $reload_command; then
         echo "Web server reloaded successfully." && echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
         if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
