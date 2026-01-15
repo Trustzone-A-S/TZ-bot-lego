@@ -1,15 +1,13 @@
 #!/bin/bash
 function cronjob() {
     if cron="true"; then
-        read -n 1 -p "Do you want to create a cronjob for automatic renewal? (y/n): " cronjob_choice && echo ""
-        if [[ "$cronjob_choice" == "y" ]]; then
+        if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
             echo "Selecting automatic renewal"
             job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
             (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
             echo ""
-            read -n 1 -p "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate) (y/n): " reload_choice
-            if [[ "$reload_choice" == "y" ]]; then
+            if yn_prompt "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate)"; then
                 automatic_restart="yes"
             else
                 automatic_restart="no"
@@ -53,8 +51,7 @@ function auto_reload() {
         fi
     else
         echo "Failed to reload using: '$reload_command'" && echo ""
-        read -n 1 -p "Would you like to try another reload command? (y/n): " retry_reload
-        if [[ "$retry_reload" = "y" ]]; then
+        if yn_prompt "Would you like to try another reload command?"; then
             auto_reload
         else
             echo "" && echo "Automatic server reloading cancelled."
@@ -79,8 +76,7 @@ function upkeep() {
         echo "WARNING: Automatic updates disabled for current session"
     fi
     if version_gt "$remote_version" "$local_version"; then
-        read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
-        if [[ "$update_choice" == "y" ]]; then
+        if yn_prompt "New version found: $remote_version. Do you want to update?"; then
             curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh" \
             -o "$SCRIPT_PATH.tmp" || exit 1
             mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH" && chmod +x "$SCRIPT_PATH" && echo -e "\nUpdate done! Please run tz-bot again."
@@ -99,8 +95,7 @@ function upkeep() {
     fi
     if ! command -v lego >/dev/null 2>&1; then
         echo "Lego is not installed."
-        read -n 1 -p "Do you want TZ-bot to try installing Lego? (y/n): " install_choice
-        if [[ "$install_choice" == "y" ]]; then
+        if yn_prompt "Do you want TZ-bot to try installing Lego?"; then
             echo -e "\nInstalling Lego..."
             sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
             if ! command -v lego >/dev/null 2>&1; then
@@ -109,8 +104,7 @@ function upkeep() {
                 fi
         else
             echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
-            read -n 1 -p "Do you want to uninstall TZ-Bot? (y/n): " uninstall_tz
-            if [[ "$uninstall_tz" == "y" ]]; then
+            if yn_prompt "Do you want to uninstall TZ-Bot?"; then
                 uninstall
             else
                 echo -e "\nExiting."
@@ -121,8 +115,7 @@ function upkeep() {
     cron="true"
     if ! command -v crontab >/dev/null 2>&1; then
         echo "---------WARNING---------" && echo "Crontab is NOT installed." && echo "Automatic renewal via cronjobs will not be available."
-        read -n 1 -p "Do you want TZ-bot to try installing cron/crontab? (y/n): " install_cron
-        if [[ "$install_cron" == "y" ]]; then
+        if yn_prompt "Do you want TZ-bot to try installing cron/crontab?"; then
             echo -e "\nInstalling cron..."
             sudo apt-get update && sudo apt-get install cron -y
                 if ! command -v crontab >/dev/null 2>&1; then
@@ -285,9 +278,7 @@ function renewal_management() {
                     renewal_management
                 fi
                 echo "You selected domain number: $remove_domain"
-                read -n 1 -p "Are you sure you want to proceed with the removal? (y/n): " confirm_removal
-                echo
-                if [[ "$confirm_removal" == "y" ]]; then
+                if yn_prompt "Are you sure you want to proceed with the removal?"; then
                     echo "Removing renewal number: $remove_domain"
                     if sudo sed -i.bak "${remove_domain}d" /etc/tz-bot/scripts/renewal_list; then
                         echo "Renewal removed from renewal script."
@@ -339,9 +330,8 @@ function renewal_management() {
 }
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
-    read -n 1 -p "Do you want to reuse saved EAB credentials? (y/n): " reuse_eab
-    echo -e "\n"
-        if [[ "$reuse_eab" == "y" ]]; then
+        if yn_prompt "Do you want to reuse saved EAB credentials?"; then
+            echo -e "\n"
             read -p "Please enter your domain: " domain
             echo
             return
@@ -363,9 +353,8 @@ function dns_full() {
         1)
             val_var="--dns azuredns"
             if grep -q "export AZURE" "/etc/tz-bot/scripts/.azure_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Azure credentials? (y/n): " reuse_azure
-                echo ""
-                if [[ "$reuse_azure" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Azure credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.azure_credentials
                     return
                 fi
@@ -379,9 +368,8 @@ function dns_full() {
         2)
             val_var="--dns route53"
             if grep -q "export AWS" "/etc/tz-bot/scripts/.aws_credentials"; then
-                read -n 1 -p "Do you want to reuse saved AWS credentials? (y/n): " reuse_aws
-                echo ""
-                if [[ "$reuse_aws" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved AWS credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.aws_credentials
                     return
                 fi
@@ -394,9 +382,8 @@ function dns_full() {
         3)
             val_var="--dns cloudflare"
             if grep -q "export CLOUDFLARE" "/etc/tz-bot/scripts/.cloudflare_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Cloudflare credentials? (y/n): " reuse_cloudflare
-                echo ""
-                if [[ "$reuse_cloudflare" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Cloudflare"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.cloudflare_credentials
                     return
                 fi
@@ -408,9 +395,8 @@ function dns_full() {
         4)
             val_var="--dns domeneshop"
             if grep -q "export DOMENESHOP" "/etc/tz-bot/scripts/.domeneshop_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Domeneshop credentials? (y/n): " reuse_domeneshop
-                echo ""
-                if [[ "$reuse_domeneshop" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Domeneshop credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.domeneshop_credentials
                     return
                 fi
@@ -422,9 +408,8 @@ function dns_full() {
         5)
             val_var="--dns infoblox"
             if grep -q "export INFOBLOX" "/etc/tz-bot/scripts/.infoblox_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Infoblox credentials? (y/n): " reuse_infoblox
-                echo ""
-                if [[ "$reuse_infoblox" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Infoblox credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.infoblox_credentials
                     return
                 fi
@@ -509,8 +494,7 @@ function settings_menu() {
             ;;
         2)
             echo -e "\nYou selected to uninstall TZ-Bot and Lego."
-            read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
-            if [[ "$confirm_uninstall" == "y" ]]; then
+            if yn_prompt "Are you sure you want to proceed?"; then
                 echo -e "\nProceeding to uninstall..."
                 uninstall
             else
@@ -664,8 +648,7 @@ function new_cert() {
         domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
-    read -n 1 -p "Do you want to specify where the certificate is saved? (y/n): " custom_path_choice
-    if [[ "$custom_path_choice" == "y" ]]; then
+    if yn_prompt "Do you want to specify where the certificate is saved?"; then
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
         echo -e "\nCustom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
