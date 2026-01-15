@@ -333,12 +333,13 @@ function renewal_management() {
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
         if yn_prompt "\nDo you want to reuse saved EAB credentials?"; then
-            read -p "\nPlease enter your domain: " domain
+            read -p "Please enter your domain: " domain
             echo
             return
         fi
     fi
-    read -p "\nPlease enter your EAB Key ID: " eab_kid
+    echo ""
+    read -p "Please enter your EAB Key ID: " eab_kid
     read -p "Please enter your EAB HMAC Key: " eab_hmac
     read -p "Please enter your domain: " domain
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
