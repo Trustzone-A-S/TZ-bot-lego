@@ -1,15 +1,14 @@
 #!/bin/bash
 function cronjob() {
     if cron="true"; then
-        read -n 1 -p "Do you want to create a cronjob for automatic renewal? (y/n): " cronjob_choice && echo ""
-        if [[ "$cronjob_choice" == "y" ]]; then
+        echo
+        if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
             echo "Selecting automatic renewal"
             job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
             (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
             echo ""
-            read -n 1 -p "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate) (y/n): " reload_choice
-            if [[ "$reload_choice" == "y" ]]; then
+            if yn_prompt "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate)"; then
                 automatic_restart="yes"
             else
                 automatic_restart="no"
@@ -22,7 +21,7 @@ function cronjob() {
 }
 function auto_reload() {
     echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. sudo systemctl reload $server\n2. sudo service $server reload\n3. [NGINX ONLY] sudo /etc/init.d/nginx reload\n4. [APACHE ONLY] sudo /etc/init.d/apache2 reload\n5. Use a custom command"
-    read -n 1 -p "Enter choice [1-5]: " reload_choice
+    read -p "Enter choice [1-5]: " reload_choice
     case $reload_choice in
         1)
             reload_command="sudo systemctl reload $server" && echo ""
@@ -40,11 +39,11 @@ function auto_reload() {
             echo "" && read -p "Enter reload command: " reload_command && echo ""
             ;;
         *)
-            echo -e "\nInvalid choice, exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying\n"
+            auto_reload
             ;;
     esac
-    echo "" && echo "Attempting to reload server using command: $reload_command"
+    echo "Attempting to reload server using command: $reload_command"
     if sudo $reload_command; then
         echo "Web server reloaded successfully." && echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
         if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
@@ -53,8 +52,7 @@ function auto_reload() {
         fi
     else
         echo "Failed to reload using: '$reload_command'" && echo ""
-        read -n 1 -p "Would you like to try another reload command? (y/n): " retry_reload
-        if [[ "$retry_reload" = "y" ]]; then
+        if yn_prompt "Would you like to try another reload command?"; then
             auto_reload
         else
             echo "" && echo "Automatic server reloading cancelled."
@@ -79,8 +77,7 @@ function upkeep() {
         echo "WARNING: Automatic updates disabled for current session"
     fi
     if version_gt "$remote_version" "$local_version"; then
-        read -n 1 -p "New version found: $remote_version. Do you want to update? (y/n): " update_choice
-        if [[ "$update_choice" == "y" ]]; then
+        if yn_prompt "New version found: $remote_version. Do you want to update?"; then
             curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh" \
             -o "$SCRIPT_PATH.tmp" || exit 1
             mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH" && chmod +x "$SCRIPT_PATH" && echo -e "\nUpdate done! Please run tz-bot again."
@@ -99,8 +96,7 @@ function upkeep() {
     fi
     if ! command -v lego >/dev/null 2>&1; then
         echo "Lego is not installed."
-        read -n 1 -p "Do you want TZ-bot to try installing Lego? (y/n): " install_choice
-        if [[ "$install_choice" == "y" ]]; then
+        if yn_prompt "Do you want TZ-bot to try installing Lego?"; then
             echo -e "\nInstalling Lego..."
             sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
             if ! command -v lego >/dev/null 2>&1; then
@@ -109,8 +105,7 @@ function upkeep() {
                 fi
         else
             echo -e "\nLego is required to use TZ-bot. If you need help installing lego, please contact TRUSTZONE support at support@trustzone.com"
-            read -n 1 -p "Do you want to uninstall TZ-Bot? (y/n): " uninstall_tz
-            if [[ "$uninstall_tz" == "y" ]]; then
+            if yn_prompt "Do you want to uninstall TZ-Bot?"; then
                 uninstall
             else
                 echo -e "\nExiting."
@@ -118,11 +113,13 @@ function upkeep() {
             fi
         fi
     fi
+    if lego -v >/dev/null 2>&1; then
+        lego -v
+    fi
     cron="true"
     if ! command -v crontab >/dev/null 2>&1; then
         echo "---------WARNING---------" && echo "Crontab is NOT installed." && echo "Automatic renewal via cronjobs will not be available."
-        read -n 1 -p "Do you want TZ-bot to try installing cron/crontab? (y/n): " install_cron
-        if [[ "$install_cron" == "y" ]]; then
+        if yn_prompt "Do you want TZ-bot to try installing cron/crontab?"; then
             echo -e "\nInstalling cron..."
             sudo apt-get update && sudo apt-get install cron -y
                 if ! command -v crontab >/dev/null 2>&1; then
@@ -215,16 +212,31 @@ function upkeep() {
         sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
     fi
 }
+function yn_prompt() {
+    local prompt="$1"
+    local answer
+
+    while true; do
+        read -n 1 -r -p "$prompt (y/n): " answer
+        echo
+
+        case "$answer" in
+            y|Y) return 0 ;;  # true
+            n|N) return 1 ;;  # false
+            *) echo "Please only input "y" or "n"" ;;
+        esac
+    done
+}
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
-    read -n 1 -p "Enter choice [1-5]: " renewal_choice
+    read -p "Enter choice [1-5]: " renewal_choice
     echo
     case $renewal_choice in
         1)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                echo -e "\nNo renewals found."
+                echo -e "No renewals found."
             else
-                echo -e "\nCurrent cronjob renewals:"
+                echo -e "Current cronjob renewals:"
                 awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
             fi
             renewal_management
@@ -241,10 +253,10 @@ function renewal_management() {
             ;;
         4)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                echo -e "\nNo renewals found."
+                echo -e "No renewals found."
                 renewal_management
             else
-                echo -e "\nCurrent cronjob renewals:"
+                echo -e "Current cronjob renewals:"
                 awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
             fi
             read -p "Please enter the NUMBER of the renewal you want to run: " renew_single
@@ -258,10 +270,10 @@ function renewal_management() {
             ;;
         5)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                echo -e "\nNo renewals found."
+                echo -e "No renewals found."
                 renewal_management
             else
-                echo -e "\nCurrent cronjob renewals:"
+                echo -e "Current cronjob renewals:"
                 awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
                 read -p "Please enter the NUMBER of the renewal you want to remove: " remove_domain
                 if ! [[ "$remove_domain" =~ ^[0-9]+$ ]]; then
@@ -269,9 +281,7 @@ function renewal_management() {
                     renewal_management
                 fi
                 echo "You selected domain number: $remove_domain"
-                read -n 1 -p "Are you sure you want to proceed with the removal? (y/n): " confirm_removal
-                echo
-                if [[ "$confirm_removal" == "y" ]]; then
+                if yn_prompt "Are you sure you want to proceed with the removal?"; then
                     echo "Removing renewal number: $remove_domain"
                     if sudo sed -i.bak "${remove_domain}d" /etc/tz-bot/scripts/renewal_list; then
                         echo "Renewal removed from renewal script."
@@ -316,40 +326,34 @@ function renewal_management() {
             cert_menu
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-7.\nRetrying\n"
+            renewal_management
             ;;
     esac
 }
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
-    read -n 1 -p "Do you want to reuse saved EAB credentials? (y/n): " reuse_eab
-    echo -e "\n"
-        if [[ "$reuse_eab" == "y" ]]; then
+        echo
+        if yn_prompt "Do you want to reuse saved EAB credentials?"; then
             read -p "Please enter your domain: " domain
-            echo
             return
         fi
     fi
+    echo ""
     read -p "Please enter your EAB Key ID: " eab_kid
-    echo 
     read -p "Please enter your EAB HMAC Key: " eab_hmac
-    echo 
     read -p "Please enter your domain: " domain
-    echo 
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
     echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox"
-    read -n 1 -p "Enter choice [1-5]: " renewal_choice
+    read -p "Enter choice [1-5]: " renewal_choice
     echo ""
     case $renewal_choice in
         1)
             val_var="--dns azuredns"
             if grep -q "export AZURE" "/etc/tz-bot/scripts/.azure_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Azure credentials? (y/n): " reuse_azure
-                echo ""
-                if [[ "$reuse_azure" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Azure credentials?"; then
                     . /etc/tz-bot/scripts/.azure_credentials
                     return
                 fi
@@ -363,9 +367,8 @@ function dns_full() {
         2)
             val_var="--dns route53"
             if grep -q "export AWS" "/etc/tz-bot/scripts/.aws_credentials"; then
-                read -n 1 -p "Do you want to reuse saved AWS credentials? (y/n): " reuse_aws
-                echo ""
-                if [[ "$reuse_aws" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved AWS credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.aws_credentials
                     return
                 fi
@@ -378,9 +381,8 @@ function dns_full() {
         3)
             val_var="--dns cloudflare"
             if grep -q "export CLOUDFLARE" "/etc/tz-bot/scripts/.cloudflare_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Cloudflare credentials? (y/n): " reuse_cloudflare
-                echo ""
-                if [[ "$reuse_cloudflare" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Cloudflare"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.cloudflare_credentials
                     return
                 fi
@@ -392,9 +394,8 @@ function dns_full() {
         4)
             val_var="--dns domeneshop"
             if grep -q "export DOMENESHOP" "/etc/tz-bot/scripts/.domeneshop_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Domeneshop credentials? (y/n): " reuse_domeneshop
-                echo ""
-                if [[ "$reuse_domeneshop" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Domeneshop credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.domeneshop_credentials
                     return
                 fi
@@ -406,9 +407,8 @@ function dns_full() {
         5)
             val_var="--dns infoblox"
             if grep -q "export INFOBLOX" "/etc/tz-bot/scripts/.infoblox_credentials"; then
-                read -n 1 -p "Do you want to reuse saved Infoblox credentials? (y/n): " reuse_infoblox
-                echo ""
-                if [[ "$reuse_infoblox" == "y" ]]; then
+                if yn_prompt "Do you want to reuse saved Infoblox credentials?"; then
+                    echo ""
                     . /etc/tz-bot/scripts/.infoblox_credentials
                     return
                 fi
@@ -419,16 +419,14 @@ function dns_full() {
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying\n"
+            dns_full
             ;;
     esac
 }
 function uninstall() {
-    echo -e "\nWelcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
-    read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
-    echo
-    if [[ "$confirm_uninstall" == "y" ]]; then
+    echo -e "Welcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
+    if yn_prompt "Are you sure you want to proceed?"; then
         echo "Uninstalling TZ-Bot and Lego..."
         if sudo rm -rf /etc/tz-bot/; then
             echo "removed /etc/tz-bot/ and all contents inside"
@@ -464,65 +462,58 @@ function uninstall() {
 }
 function cert_menu() {
     echo -e "\nCertificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
-    read -n 1 -p "Enter choice [1-3]: " cert_menu_choice
+    read -p "Enter choice [1-3]: " cert_menu_choice
     case $cert_menu_choice in
         1)
-            echo -e "\n"
             new_cert
             echo
             ;;
         2)
-            echo -e "\n"
             renewal_management
             ;;
         3)
-            echo -e "\n"
             start_prompt
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            cert_menu
             ;;
     esac
 }
 function settings_menu() {
     echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
-    read -n 1 -p "Enter choice [1-3]: " settings_menu_choice
+    read -p "Enter choice [1-4]: " settings_menu_choice
     case $settings_menu_choice in
         1)
-            echo -e "\n"
             ca_selection
             ;;
         2)
-            echo -e "\nYou selected to uninstall TZ-Bot and Lego."
-            read -n 1 -p "Are you sure you want to proceed? (y/n): " confirm_uninstall
-            if [[ "$confirm_uninstall" == "y" ]]; then
-                echo -e "\nProceeding to uninstall..."
+            echo -e "You selected to uninstall TZ-Bot and Lego."
+            if yn_prompt "Are you sure you want to proceed?"; then
+                echo -e "Proceeding to uninstall..."
                 uninstall
             else
-                echo -e "\nUninstallation cancelled."
+                echo -e "Uninstallation cancelled."
                 settings_menu
             fi
             ;;
         3)
-            echo -e "\n\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
+            echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             settings_menu
             ;;
         4)
-            echo -e "\n"
             start_prompt
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-4.\nRetrying\n"
+            settings_menu
             ;;
     esac
 }
 function start_prompt() {
     echo -e "\nMain Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
-    read -n 1 -p "Enter choice [1-3]: " initial_choice
-    echo
+    read -p "Enter choice [1-3]: " initial_choice
     case $initial_choice in
         1)
             cert_menu
@@ -531,17 +522,17 @@ function start_prompt() {
             settings_menu
             ;;
         3)
-            echo -e "\nExiting."
+            echo -e "Exiting."
             exit 0
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            start_prompt
             ;;
     esac
 }
 function ca_selection() {
-    echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -n 1 -p "Enter choice [1-3]: " ca_select_choice
+    echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -p "Enter choice [1-3]: " ca_select_choice
     case $ca_select_choice in
         1)
             ca_select="https://emea.acme.atlas.globalsign.com/directory" && ca_print="GlobalSign"
@@ -553,8 +544,8 @@ function ca_selection() {
             ca_select="https://acme.sectigo.com/v2/OV" && ca_print="Sectigo OV"
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            ca_selection
             ;;
     esac
     if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
@@ -584,57 +575,67 @@ function ordering() {
         fi
     fi
     echo -e "\nYour certificate is here: $path"
+    cert_menu
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -n 1 -p "Enter choice [1-2]: " server_type
+    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
-            val_var="--apache" && server="apache2" && echo -e "\n\nApache selected"
+            val_var="--apache" && server="apache2" && echo -e "\nApache selected"
+            validation
             ;;
         2)
-            val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
+            val_var="--nginx" && server="nginx" && echo -e "\nNginx selected"
+            validation
             ;;
         *)
-            echo -e "\nInvalid choice, exiting."
-            exit 1
+            echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying\n"
+            new_cert
             ;;
     esac
-
+}
+function validation() {
     if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
-        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-3]: " validation_choice
+        echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated\n" && read_credentials
+                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated" && read_credentials
+                var_definition
                 ;;
             2)
-                lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
+                var_definition
                 ;;
             3)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "\nMODE: HTTP Validation" && read_credentials
+                var_definition
                 ;;
             *)
-                echo -e "\nInvalid choice. Exiting."
-                exit 1
+                echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+                validation
                 ;;
         esac
     else
-        echo -e "\nHow do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -n 1 -p "Enter choice [1-2]: " validation_choice
+        echo -e "How do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-2]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
+                var_definition
                 ;;
             2)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: \nHTTP Validation" && read_credentials
+                var_definition
                 ;;
             *)
-                echo -e "\nInvalid choice. Exiting."
-                exit 1
+                echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying\n"
+                validation
                 ;;
         esac
     fi
-
+}
+function var_definition() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
     fi
@@ -650,17 +651,16 @@ function new_cert() {
         domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
-    read -n 1 -p "Do you want to specify where the certificate is saved? (y/n): " custom_path_choice
-    if [[ "$custom_path_choice" == "y" ]]; then
+    echo
+    if yn_prompt "Do you want to specify where the certificate is saved?"; then
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
-        echo -e "\nCustom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
+        echo -e "Custom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
     else
-        echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/" && echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
+        echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/\n" && echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
     fi
     ordering
-    cert_menu
 }
 
 upkeep
