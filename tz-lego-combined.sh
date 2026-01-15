@@ -112,6 +112,9 @@ function upkeep() {
             fi
         fi
     fi
+    if lego -v >/dev/null 2>&1; then
+        lego -v
+    fi
     cron="true"
     if ! command -v crontab >/dev/null 2>&1; then
         echo "---------WARNING---------" && echo "Crontab is NOT installed." && echo "Automatic renewal via cronjobs will not be available."
@@ -638,7 +641,6 @@ function validation() {
         esac
     fi
 }
-
 function var_definition() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
