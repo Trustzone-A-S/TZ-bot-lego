@@ -39,7 +39,7 @@ function auto_reload() {
             echo "" && read -p "Enter reload command: " reload_command && echo ""
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying"
             auto_reload
             ;;
     esac
@@ -325,7 +325,7 @@ function renewal_management() {
             cert_menu
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-7.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-7.\nRetrying"
             renewal_management
             ;;
     esac
@@ -418,7 +418,7 @@ function dns_full() {
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying"
             dns_full
             ;;
     esac
@@ -474,7 +474,7 @@ function cert_menu() {
             start_prompt
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying"
             cert_menu
             ;;
     esac
@@ -505,7 +505,7 @@ function settings_menu() {
             start_prompt
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-4.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-4.\nRetrying"
             settings_menu
             ;;
     esac
@@ -525,7 +525,7 @@ function start_prompt() {
             exit 0
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying"
             start_prompt
             ;;
     esac
@@ -543,7 +543,7 @@ function ca_selection() {
             ca_select="https://acme.sectigo.com/v2/OV" && ca_print="Sectigo OV"
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying"
             ca_selection
             ;;
     esac
@@ -590,7 +590,7 @@ function new_cert() {
             validation
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying\n"
+            echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying"
             new_cert
             ;;
     esac
@@ -612,7 +612,7 @@ function validation() {
                 var_definition
                 ;;
             *)
-                echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying\n"
+                echo -e "Error: Please only enter numbers in the range 1-3.\nRetrying"
                 validation
                 ;;
         esac
@@ -628,7 +628,7 @@ function validation() {
                 var_definition
                 ;;
             *)
-                echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying\n"
+                echo -e "Error: Please only enter numbers in the range 1-2.\nRetrying"
                 validation
                 ;;
         esac
