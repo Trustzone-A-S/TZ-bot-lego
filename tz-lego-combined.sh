@@ -38,8 +38,8 @@ function auto_reload() {
             echo "" && read -p "Enter reload command: " reload_command && echo ""
             ;;
         *)
-            echo -e "\nInvalid choice, exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-5.\nRetrying\n"
+            auto_reload
             ;;
     esac
     echo "" && echo "Attempting to reload server using command: $reload_command"
@@ -323,8 +323,8 @@ function renewal_management() {
             cert_menu
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-7.\nRetrying\n"
+            renewal_management
             ;;
     esac
 }
@@ -420,8 +420,8 @@ function dns_full() {
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-5.\nRetrying\n"
+            dns_full
             ;;
     esac
 }
@@ -479,8 +479,8 @@ function cert_menu() {
             start_prompt
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-3.\nRetrying\n"
+            cert_menu
             ;;
     esac
 }
@@ -512,8 +512,8 @@ function settings_menu() {
             start_prompt
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-4.\nRetrying\n"
+            settings_menu
             ;;
     esac
 }
@@ -533,8 +533,8 @@ function start_prompt() {
             exit 0
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-3.\nRetrying\n"
+            start_prompt
             ;;
     esac
 }
@@ -551,8 +551,8 @@ function ca_selection() {
             ca_select="https://acme.sectigo.com/v2/OV" && ca_print="Sectigo OV"
             ;;
         *)
-            echo -e "\nInvalid choice. Exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-3.\nRetrying\n"
+            ca_selection
             ;;
     esac
     if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
@@ -595,8 +595,8 @@ function new_cert() {
             val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
             ;;
         *)
-            echo -e "\nInvalid choice, exiting."
-            exit 1
+            echo -e "\nError: Please only enter numbers in the range 1-2.\nRetrying\n"
+            new_cert
             ;;
     esac
 
@@ -613,8 +613,8 @@ function new_cert() {
                 lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
                 ;;
             *)
-                echo -e "\nInvalid choice. Exiting."
-                exit 1
+                echo -e "\nError: Please only enter numbers in the range 1-3.\nRetrying\n"
+                new_cert
                 ;;
         esac
     else
@@ -627,8 +627,8 @@ function new_cert() {
                 lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
                 ;;
             *)
-                echo -e "\nInvalid choice. Exiting."
-                exit 1
+                echo -e "\nError: Please only enter numbers in the range 1-2.\nRetrying\n"
+                new_cert
                 ;;
         esac
     fi
