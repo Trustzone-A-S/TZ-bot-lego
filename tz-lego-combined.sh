@@ -305,10 +305,7 @@ function renewal_management() {
             fi
             ;;
         6)
-            echo "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."
-            read -n 1 -p "Type 'y' to confirm, or 'n' to cancel: " confirm_all_removal
-            echo
-            if [[ "$confirm_all_removal" = "y" ]]; then
+            if yn_prompt "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."; then
                 sudo rm /etc/tz-bot/scripts/renewal_hook.sh
                 sudo touch /etc/tz-bot/scripts/renewal_hook.sh && sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
                 sudo rm /etc/tz-bot/scripts/renewal_list
