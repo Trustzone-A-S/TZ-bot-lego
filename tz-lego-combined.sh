@@ -463,7 +463,7 @@ function uninstall() {
     fi
 }
 function cert_menu() {
-    echo -e "Certificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
+    echo -e "\nCertificate Menu Options:\n1. Order a new certificate\n2. Renewal Management\n3. Back"
     read -p "Enter choice [1-3]: " cert_menu_choice
     case $cert_menu_choice in
         1)
@@ -483,7 +483,7 @@ function cert_menu() {
     esac
 }
 function settings_menu() {
-    echo -e "Settings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
+    echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
     read -p "Enter choice [1-4]: " settings_menu_choice
     case $settings_menu_choice in
         1)
@@ -500,12 +500,11 @@ function settings_menu() {
             fi
             ;;
         3)
-            echo -e "For support, feature requests and other inquiries, please contact TZ support at the following email address:"
+            echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             settings_menu
             ;;
         4)
-            echo -e ""
             start_prompt
             ;;
         *)
@@ -515,9 +514,8 @@ function settings_menu() {
     esac
 }
 function start_prompt() {
-    echo -e "Main Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
+    echo -e "\nMain Menu Options:\n1. Certificates & Renewals\n2. Settings\n3. Exit"
     read -p "Enter choice [1-3]: " initial_choice
-    echo
     case $initial_choice in
         1)
             cert_menu
@@ -536,7 +534,7 @@ function start_prompt() {
     esac
 }
 function ca_selection() {
-    echo -e "1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -p "Enter choice [1-3]: " ca_select_choice
+    echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV" && read -p "Enter choice [1-3]: " ca_select_choice
     case $ca_select_choice in
         1)
             ca_select="https://emea.acme.atlas.globalsign.com/directory" && ca_print="GlobalSign"
