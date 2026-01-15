@@ -656,7 +656,7 @@ function var_definition() {
         echo -e "Custom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
     else
-        echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/" && echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
+        echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/\n" && echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
     fi
     ordering
