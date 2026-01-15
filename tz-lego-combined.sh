@@ -223,7 +223,6 @@ function yn_prompt() {
         esac
     done
 }
-
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
     read -p "Enter choice [1-5]: " renewal_choice
@@ -582,6 +581,7 @@ function ordering() {
         fi
     fi
     echo -e "\nYour certificate is here: $path"
+    cert_menu
 }
 function new_cert() {
     # Prompt for validation method
@@ -590,16 +590,19 @@ function new_cert() {
     case $server_type in
         1)
             val_var="--apache" && server="apache2" && echo -e "\n\nApache selected"
+            validation
             ;;
         2)
             val_var="--nginx" && server="nginx" && echo -e "\n\nNginx selected"
+            validation
             ;;
         *)
             echo -e "\nError: Please only enter numbers in the range 1-2.\nRetrying\n"
             new_cert
             ;;
     esac
-
+}
+function validation() {
     if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
         echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
@@ -614,7 +617,7 @@ function new_cert() {
                 ;;
             *)
                 echo -e "\nError: Please only enter numbers in the range 1-3.\nRetrying\n"
-                new_cert
+                validation
                 ;;
         esac
     else
@@ -622,17 +625,21 @@ function new_cert() {
         case $validation_choice in
             1)
                 lego_var="-E lego" && echo -e "\nMODE: DNS\n" && read_credentials && dns_full
+                var_definition
                 ;;
             2)
                 lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: HTTP Validation\n" && read_credentials
+                var_definition
                 ;;
             *)
                 echo -e "\nError: Please only enter numbers in the range 1-2.\nRetrying\n"
-                new_cert
+                validation
                 ;;
         esac
     fi
+}
 
+function var_definition() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
     fi
@@ -657,7 +664,6 @@ function new_cert() {
         path_var="--path $path"
     fi
     ordering
-    cert_menu
 }
 
 upkeep
