@@ -484,7 +484,7 @@ function cert_menu() {
 }
 function settings_menu() {
     echo -e "Settings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
-    read -p "Enter choice [1-3]: " settings_menu_choice
+    read -p "Enter choice [1-4]: " settings_menu_choice
     case $settings_menu_choice in
         1)
             ca_selection
