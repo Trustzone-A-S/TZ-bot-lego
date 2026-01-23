@@ -331,7 +331,7 @@ function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
         echo
         if yn_prompt "Do you want to reuse saved EAB credentials?"; then
-            read -p "Please enter your domain: " domain
+            read -p "Please enter the common name(s) for the certificate: " domain
             return
         fi
     fi
