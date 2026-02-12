@@ -649,10 +649,16 @@ function var_definition() {
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
     domain_renew_args=""
+    declare -A seen_domains
 
     for d in "${domain_array[@]}"; do
         d="$(echo "$d" | xargs)"
         [[ -z "$d" ]] && continue
+
+        if [[ -n "${seen_domains[$d]}" ]]; then
+            continue
+        fi
+        seen_domains[$d]=1
 
         domain_args+=" --domains $d"
         domain_renew_args+=" --domains $d"
