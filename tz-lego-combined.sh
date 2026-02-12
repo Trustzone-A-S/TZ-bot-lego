@@ -332,14 +332,20 @@ function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
         echo
         if yn_prompt "Do you want to reuse saved EAB credentials?"; then
-            read -p "Please enter the common name(s) for the certificate: " domain
+            echo "Please enter the common name(s) for the certificate"
+            echo "Multiple sans can be input as a comma separated list"
+            echo "Example: *.trustzone.com,trustzone.com"
+            read -p "Input: " domain
             return
         fi
     fi
     echo ""
     read -p "Please enter your EAB Key ID: " eab_kid
     read -p "Please enter your EAB HMAC Key: " eab_hmac
-    read -p "Please enter your domain: " domain
+    echo "Please enter the common name(s) for the certificate"
+    echo "Multiple sans can be input as a comma separated list"
+    echo "Example: *.trustzone.com,trustzone.com"
+    read -p "Input: " domain
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
