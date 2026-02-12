@@ -1,4 +1,5 @@
 #!/bin/bash
+set -f
 function cronjob() {
     if cron="true"; then
         echo
@@ -637,15 +638,26 @@ function var_definition() {
     fi
     . /etc/tz-bot/scripts/.ca
     registration="--server $selected_ca --email test123@test.com -a"
-    eab="--eab --kid "${eab_kid:?}" --hmac "${eab_hmac:?}""
-    if [[ "$domain" == "*."* ]]; then
-        domain_non_wc="${domain#*.}"
-        domain_var="--domains "${domain:?}" --domains "${domain_non_wc:?}" --key-type rsa2048 run"
-        domain_renew_var="--domains "${domain:?}" --domains "${domain_non_wc:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-    else
-        domain_var="--domains "${domain:?}" --key-type rsa2048 run"
-        domain_renew_var="--domains "${domain:?}" --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-    fi
+    eab="--eab --kid "${eab_kid:?}" --hmac "${eab_hmac:?}"" 
+
+    IFS=',' read -r -a domain_array <<< "$domain"
+    domain_args=""
+    domain_renew_args=""
+
+    for d in "${domain_array[@]}"; do
+        d="$(echo "$d" | xargs)"
+        [[ -z "$d" ]] && continue
+
+        domain_args+=" --domains $d"
+        domain_renew_args+=" --domains $d"
+    done
+
+    domain_args="${domain_args# }"
+    domain_renew_args="${domain_renew_args# }"
+
+    domain_var="$domain_args --key-type rsa2048 run"
+    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
