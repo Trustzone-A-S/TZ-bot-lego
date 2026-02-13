@@ -680,7 +680,7 @@ function var_definition() {
     domain_renew_args="${domain_renew_args# }"
 
     domain_var="$domain_args --key-type rsa2048 run"
-    if custom_renewhook == "yes"; then
+    if [[ "$custom_renewhook" == "yes" ]]; then
         domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
     else
         domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
