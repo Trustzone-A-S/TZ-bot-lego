@@ -459,16 +459,11 @@ function uninstall() {
             echo "Error deleting /usr/local/bin/tz-bot"
         fi
         if sudo rm -rf /usr/local/bin/lego; then
-            echo "Removed /usr/local/bin/lego"
+            echo "Lego have been uninstalled successfully."
         else
             echo "Error deleting /usr/local/bin/lego"
         fi
         sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
-        if command -v lego >/dev/null 2>&1; then
-            echo "Uninstallation of Lego failed. Please remove manually."
-        else
-            echo "Lego have been uninstalled successfully."
-        fi
         if command -v tz-bot >/dev/null 2>&1; then
             echo "Uninstallation of TZ-bot failed. Please remove manually."
         else
