@@ -73,7 +73,15 @@ function auto_reload() {
         if yn_prompt "Would you like to try another reload command?"; then
             auto_reload
         else
-            echo "" && echo "Automatic server reloading cancelled."
+            if yn_prompt "Add command to cronjob despite failing?"; then
+                echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
+                    sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
+                    echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                fi
+            else
+                echo "" && echo "Automatic server reloading cancelled."
+            fi
         fi
     fi
 }
