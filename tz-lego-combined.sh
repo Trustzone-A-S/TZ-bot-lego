@@ -658,6 +658,16 @@ function validation() {
         esac
     fi
 }
+function path_selection () {
+    read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
+        echo -e "Custom path selected: $custom_path"
+        if yn_prompt "Continue with selected path?"; then
+            echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
+            path_var="--path $path"
+        else
+            path_selection
+        fi
+}
 function var_definition() {
     if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
         . /etc/tz-bot/scripts/.user_credentials
@@ -696,9 +706,7 @@ function var_definition() {
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
-        read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path 
-        echo -e "Custom path selected: $custom_path" && echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
-        path_var="--path $path"
+        path_selection
     else
         echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/\n" && echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
         path_var="--path $path"
