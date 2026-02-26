@@ -9,12 +9,29 @@ function cronjob() {
             job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
             (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
             echo ""
-            if yn_prompt "Do you want to setup automatic reload of your web server? (This will reload your server AFTER getting a new certificate)"; then
+            echo "Renewal options: "
+            echo "1. Setup automatic restart of webserver"
+            echo "2. Run custom/external script upon renewal"
+            echo "3. Only renew certificate"
+            read -p "Enter choice [1-3]: " hook_selection
+            case $hook_selection in
+            1)
+                custom_renewhook="no"
                 automatic_restart="yes"
-            else
+                ;;
+            2)
+                read -p "Please enter the path to the script you want to use: " renewal_hook_script
+                custom_renewhook="yes"
                 automatic_restart="no"
-                echo -e "\nProceeding without automatic reload.\nWarning: Your server might not pick up new certificates until it is manually reloaded."
-            fi
+                ;;
+            3)
+                echo -e "Proceeding using only automatic renewal of certificates."
+                automatic_restart="no"
+                custom_renewhook="no"
+                ;;
+            *)
+                ;;
+            esac
         else 
             echo -e "\nSelecting manual renewal" && automatic_restart="no"
         fi
@@ -56,12 +73,20 @@ function auto_reload() {
         if yn_prompt "Would you like to try another reload command?"; then
             auto_reload
         else
-            echo "" && echo "Automatic server reloading cancelled."
+            if yn_prompt "Add command to cronjob despite failing?"; then
+                echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
+                    sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
+                    echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                fi
+            else
+                echo "" && echo "Automatic server reloading cancelled."
+            fi
         fi
     fi
 }
 function upkeep() {
-    local_version="1.6.2"
+    local_version="1.6.3"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -442,16 +467,11 @@ function uninstall() {
             echo "Error deleting /usr/local/bin/tz-bot"
         fi
         if sudo rm -rf /usr/local/bin/lego; then
-            echo "Removed /usr/local/bin/lego"
+            echo "Lego have been uninstalled successfully."
         else
             echo "Error deleting /usr/local/bin/lego"
         fi
         sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
-        if command -v lego >/dev/null 2>&1; then
-            echo "Uninstallation of Lego failed. Please remove manually."
-        else
-            echo "Lego have been uninstalled successfully."
-        fi
         if command -v tz-bot >/dev/null 2>&1; then
             echo "Uninstallation of TZ-bot failed. Please remove manually."
         else
@@ -668,8 +688,11 @@ function var_definition() {
     domain_renew_args="${domain_renew_args# }"
 
     domain_var="$domain_args --key-type rsa2048 run"
-    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-
+    if [[ "$custom_renewhook" == "yes" ]]; then
+        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
+    else
+        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+    fi
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
