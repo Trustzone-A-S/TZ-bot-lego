@@ -664,7 +664,7 @@ function path_selection () {
         echo "No path specified, try again"
         path_selection
     else
-        echo -e "Custom path selected: $custom_path"
+        echo -e "Custom path selected: $custom_path\n"
     fi
     if yn_prompt "Continue with selected path?"; then
         echo "path=$custom_path" > /etc/tz-bot/scripts/storage && . /etc/tz-bot/scripts/storage
