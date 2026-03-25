@@ -213,7 +213,7 @@ function upkeep() {
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
