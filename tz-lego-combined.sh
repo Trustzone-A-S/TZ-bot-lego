@@ -369,6 +369,7 @@ function renewal_management() {
             else
                 echo "No certificate found, please verify the entered common name and try again"
             fi
+            ;;
         8)
             cert_menu
             ;;
