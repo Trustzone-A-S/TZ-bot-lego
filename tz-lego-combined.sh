@@ -1,5 +1,14 @@
 #!/bin/bash
 set -f
+#!/bin/bash
+
+function run_with_optional_sudo() {
+    if sudo "$@" >/dev/null 2>&1; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
 function cronjob() {
     if cron="true"; then
         echo
@@ -596,12 +605,13 @@ function ca_selection() {
 }
 function ordering() {
     echo "LEGO command: sudo $lego_var $registration $val_var $path_var $eab $domain_var"
-    if sudo $lego_var $registration $val_var $path_var $eab $domain_var; then
-        cronjob
-    else
-        echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation." && echo "You can also contact TRUSTZONE support at support@trustzone.com"
-        exit
-    fi
+    run_with_optional_sudo $lego_var $registration $val_var $path_var $eab $domain_var
+    #if sudo $lego_var $registration $val_var $path_var $eab $domain_var; then
+    #    cronjob
+    #else
+    #    echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation." && echo "You can also contact TRUSTZONE support at support@trustzone.com"
+    #    exit
+    #fi
     if [[ $renewal = yes ]]; then
         echo -e "\nChecking for existing renewal"
         if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
