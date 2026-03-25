@@ -4,8 +4,10 @@ set -f
 
 function run_with_optional_sudo() {
     if sudo "$@" >/dev/null 2>&1; then
+        echo "Using sudo."
         sudo "$@"
     else
+        echo "Sudo not possible, retrying without sudo"
         "$@"
     fi
 }
