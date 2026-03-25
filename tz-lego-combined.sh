@@ -2,13 +2,6 @@
 set -f
 #!/bin/bash
 
-function run_with_optional_sudo() {
-    if sudo "$@" >/dev/null 2>&1; then
-        sudo "$@"
-    else
-        "$@"
-    fi
-}
 function cronjob() {
     if cron="true"; then
         echo
@@ -245,6 +238,14 @@ function upkeep() {
         sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
         chmod 600 /etc/tz-bot/scripts/renew_single.sh
         sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+    fi
+    SUDO=""
+    echo "Testing sudo"
+    if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
+        SUDO="sudo"
+        echo "Sudo test completed. Using Sudo."
+    else
+        echo "Sudo test failed. Not using Sudo."
     fi
 }
 function yn_prompt() {
@@ -606,8 +607,7 @@ function ca_selection() {
 }
 function ordering() {
     echo "LEGO command: sudo $lego_var $registration $val_var $path_var $eab $domain_var"
-    if run_with_optional_sudo $lego_var $registration $val_var $path_var $eab $domain_var; then
-    #if sudo $lego_var $registration $val_var $path_var $eab $domain_var; then
+    if $SUDO $lego_var $registration $val_var $path_var $eab $domain_var; then
         cronjob
     else
         echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation." && echo "You can also contact TRUSTZONE support at support@trustzone.com"
@@ -615,7 +615,7 @@ function ordering() {
     fi
     if [[ $renewal = yes ]]; then
         echo -e "\nChecking for existing renewal"
-        if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
+        if $SUDO grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list" && echo "sudo $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
