@@ -40,20 +40,20 @@ function cronjob() {
     fi
 }
 function auto_reload() {
-    echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. sudo systemctl reload $server\n2. sudo service $server reload\n3. [NGINX ONLY] sudo /etc/init.d/nginx reload\n4. [APACHE ONLY] sudo /etc/init.d/apache2 reload\n5. Use a custom command"
+    echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?\n1. $SUDO systemctl reload $server\n2. $SUDO service $server reload\n3. [NGINX ONLY] $SUDO /etc/init.d/nginx reload\n4. [APACHE ONLY] $SUDO /etc/init.d/apache2 reload\n5. Use a custom command"
     read -p "Enter choice [1-5]: " reload_choice
     case $reload_choice in
         1)
-            reload_command="sudo systemctl reload $server" && echo ""
+            reload_command="$SUDO systemctl reload $server" && echo ""
             ;;
         2)
-            reload_command="sudo service $server reload" && echo ""
+            reload_command="$SUDO service $server reload" && echo ""
             ;;
         3)
-            reload_command="sudo /etc/init.d/nginx reload" && echo ""
+            reload_command="$SUDO /etc/init.d/nginx reload" && echo ""
             ;;
         4)
-            reload_command="sudo /etc/init.d/apache2 reload" && echo ""
+            reload_command="$SUDO /etc/init.d/apache2 reload" && echo ""
             ;;
         5)
             echo "" && read -p "Enter reload command: " reload_command && echo ""
@@ -64,10 +64,10 @@ function auto_reload() {
             ;;
     esac
     echo "Attempting to reload server using command: $reload_command"
-    if sudo $reload_command; then
+    if $SUDO $reload_command; then
         echo "Web server reloaded successfully." && echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
         if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
-            sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
+            $SUDO sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
             echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
         fi
     else
@@ -78,7 +78,7 @@ function auto_reload() {
             if yn_prompt "Add command to cronjob despite failing?"; then
                 echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
                 if grep -q "$reload_command" "/etc/tz-bot/scripts/renewal_hook.sh"; then
-                    sudo sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
+                    $SUDO sed -i.bak "\#$reload_command#d" /etc/tz-bot/scripts/renewal_hook.sh
                     echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
                 fi
             else
@@ -113,9 +113,9 @@ function upkeep() {
         fi
     fi
     if ! command -v tz-bot >/dev/null 2>&1; then
-        sudo mkdir -p /usr/local/bin
-        if sudo mv /tmp/tz-bot /usr/local/bin/tz-bot; then
-            sudo chmod +x /usr/local/bin/tz-bot && sudo mkdir -p /etc/tz-bot && echo "TZ-Bot has been installed successfully. You can now run it using the command 'sudo tz-bot'"
+        $SUDO mkdir -p /usr/local/bin
+        if $SUDO mv /tmp/tz-bot /usr/local/bin/tz-bot; then
+            $SUDO chmod +x /usr/local/bin/tz-bot && $SUDO mkdir -p /etc/tz-bot && echo "TZ-Bot has been installed successfully. You can now run it using the command 'sudo tz-bot'"
             exit
         else
             echo -e "\nInstallation failed."
@@ -126,7 +126,7 @@ function upkeep() {
         echo "Lego is not installed."
         if yn_prompt "Do you want TZ-bot to try installing Lego?"; then
             echo -e "\nInstalling Lego..."
-            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ && sudo mkdir -p /usr/local/bin && sudo mv /tmp/lego /usr/local/bin/lego && sudo chmod +x /usr/local/bin/lego
+            $SUDO curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz && $SUDO tar -xvzf /tmp/lego.tar.gz -C /tmp/ && $SUDO mkdir -p /usr/local/bin && $SUDO mv /tmp/lego /usr/local/bin/lego && $SUDO chmod +x /usr/local/bin/lego
             if ! command -v lego >/dev/null 2>&1; then
                 echo -e "\nLego installation failed. Please install Lego manually."
                 exit 1
@@ -149,7 +149,7 @@ function upkeep() {
         echo "---------WARNING---------" && echo "Crontab is NOT installed." && echo "Automatic renewal via cronjobs will not be available."
         if yn_prompt "Do you want TZ-bot to try installing cron/crontab?"; then
             echo -e "\nInstalling cron..."
-            sudo apt-get update && sudo apt-get install cron -y
+            $SUDO apt-get update && $SUDO apt-get install cron -y
                 if ! command -v crontab >/dev/null 2>&1; then
                     echo -e "\nCrontab installation failed. Please install cron/crontab manually."
                     exit 1
@@ -161,7 +161,7 @@ function upkeep() {
     fi
     mkdir -p /etc/tz-bot/scripts/ && mkdir -p /etc/tz-bot/certs/
     if ! [ -e "/etc/tz-bot/scripts/.ca" ] ; then
-        touch /etc/tz-bot/scripts/.ca && sudo echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
+        touch /etc/tz-bot/scripts/.ca && $SUDO echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
     fi
     if ! [ -e "/etc/tz-bot/scripts/storage" ] ; then
         touch /etc/tz-bot/scripts/storage
@@ -190,54 +190,54 @@ function upkeep() {
         chmod +x /etc/tz-bot/scripts/renewal_hook.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ] ; then
-        sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal.sh
-        sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
         chmod 600 /etc/tz-bot/scripts/renewal.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal_force.sh" ] ; then
-        sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
         chmod 600 /etc/tz-bot/scripts/renewal_force.sh
-        sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renew_single.sh" ] ; then
-        sudo echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
         chmod 600 /etc/tz-bot/scripts/renew_single.sh
-        sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
+        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
     fi
     SUDO=""
     echo "Testing sudo"
@@ -278,12 +278,12 @@ function renewal_management() {
             ;;
         2)
             echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
-            sudo bash /etc/tz-bot/scripts/renewal.sh
+        $SUDO bash /etc/tz-bot/scripts/renewal.sh
             renewal_management
             ;;
         3)
             echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
-            sudo bash /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO bash /etc/tz-bot/scripts/renewal_force.sh
             renewal_management
             ;;
         4)
@@ -300,8 +300,8 @@ function renewal_management() {
                 renewal_management
             fi
             sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
-            sudo bash /etc/tz-bot/scripts/renew_single.sh
-            sudo rm -rf /etc/tz-bot/scripts/renew_single_list
+        $SUDO bash /etc/tz-bot/scripts/renew_single.sh
+        $SUDO rm -rf /etc/tz-bot/scripts/renew_single_list
             ;;
         5)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
@@ -318,17 +318,17 @@ function renewal_management() {
                 echo "You selected domain number: $remove_domain"
                 if yn_prompt "Are you sure you want to proceed with the removal?"; then
                     echo "Removing renewal number: $remove_domain"
-                    if sudo sed -i.bak "${remove_domain}d" /etc/tz-bot/scripts/renewal_list; then
+                    if $SUDO sed -i.bak "${remove_domain}d" /etc/tz-bot/scripts/renewal_list; then
                         echo "Renewal removed from renewal script."
-                        if sudo grep -q 'sudo lego' /etc/tz-bot/scripts/renewal_list; then
+                        if $SUDO grep -q '$SUDO lego' /etc/tz-bot/scripts/renewal_list; then
                             echo "Keeping crontab entry, since there are still renewals left in the script."
                         else
-                            sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
+                        $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | $SUDO crontab -
                             echo "Crontab entry removed, since no renewals are left in the script."
-                            sudo rm /etc/tz-bot/scripts/renewal_list
-                            sudo rm /etc/tz-bot/scripts/renewal_hook.sh
-                            sudo touch /etc/tz-bot/scripts/renewal_hook.sh && sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
-                            sudo touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
+                        $SUDO rm /etc/tz-bot/scripts/renewal_list
+                        $SUDO rm /etc/tz-bot/scripts/renewal_hook.sh
+                        $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh && $SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+                        $SUDO touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
                         fi
                     else
                         echo "Failed to remove renewal from script."
@@ -342,11 +342,11 @@ function renewal_management() {
             ;;
         6)
             if yn_prompt "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."; then
-                sudo rm /etc/tz-bot/scripts/renewal_hook.sh
-                sudo touch /etc/tz-bot/scripts/renewal_hook.sh && sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
-                sudo rm /etc/tz-bot/scripts/renewal_list
-                sudo touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
-                sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
+            $SUDO rm /etc/tz-bot/scripts/renewal_hook.sh
+            $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh &&$SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+            $SUDO rm /etc/tz-bot/scripts/renewal_list
+            $SUDO touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
+            $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' |$SUDO crontab -
                 echo "All renewals have been removed."
                 renewal_management
             else
@@ -361,9 +361,9 @@ function renewal_management() {
             else
                 revoke_path="/etc/tz-bot/certs"
             fi
-            if sudo lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains ${revoke_domain} --key-type rsa2048 list; then
+            if$SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains ${revoke_domain} --key-type rsa2048 list; then
                 if yn_prompt "Would you like to continue with the revocation?"; then
-                    sudo lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains learning.alfassl.com --key-type rsa2048 revoke
+                $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains learning.alfassl.com --key-type rsa2048 revoke
                 else
                     echo "Revocation cancelled"
                 fi
@@ -483,22 +483,22 @@ function uninstall() {
     echo -e "Welcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
     if yn_prompt "Are you sure you want to proceed?"; then
         echo "Uninstalling TZ-Bot and Lego..."
-        if sudo rm -rf /etc/tz-bot/; then
+        if$SUDO rm -rf /etc/tz-bot/; then
             echo "removed /etc/tz-bot/ and all contents inside"
         else
             echo "Error deleting /etc/tz-bot/"
         fi
-        if sudo rm -rf /usr/local/bin/tz-bot; then
+        if$SUDO rm -rf /usr/local/bin/tz-bot; then
             echo "removed /usr/local/bin/tz-bot"
         else
             echo "Error deleting /usr/local/bin/tz-bot"
         fi
-        if sudo rm -rf /usr/local/bin/lego; then
+        if$SUDO rm -rf /usr/local/bin/lego; then
             echo "Lego have been uninstalled successfully."
         else
             echo "Error deleting /usr/local/bin/lego"
         fi
-        sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
+    $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' |$SUDO crontab -
         if command -v tz-bot >/dev/null 2>&1; then
             echo "Uninstallation of TZ-bot failed. Please remove manually."
         else
@@ -606,7 +606,7 @@ function ca_selection() {
     fi
 }
 function ordering() {
-    echo "LEGO command: sudo $lego_var $registration $val_var $path_var $eab $domain_var"
+    echo "LEGO command: $SUDO $lego_var $registration $val_var $path_var $eab $domain_var"
     if $SUDO $lego_var $registration $val_var $path_var $eab $domain_var; then
         cronjob
     else
@@ -618,7 +618,7 @@ function ordering() {
         if $SUDO grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
-            echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list" && echo "sudo $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
+            echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list" && echo "$SUDO $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
         fi
         if [[ "$automatic_restart" == "yes" ]]; then
             auto_reload
@@ -731,9 +731,9 @@ function var_definition() {
 
     domain_var="$domain_args --key-type rsa2048 run"
     if [[ "$custom_renewhook" == "yes" ]]; then
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
+        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='$SUDO bash $renewal_hook_script'"
     else
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='$SUDO bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
     echo
