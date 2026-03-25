@@ -355,20 +355,23 @@ function renewal_management() {
             fi
             ;;
         7)
-            read -p "Please input the common name of the certificate you want to revoke" revoke_domain
+            read -p "Please input the common name of the certificate you want to revoke: " revoke_domain
             if yn_prompt "Did you order this certificate using a custom path?"; then
                 read -p "Please enter the path: " revoke_path
             else
                 revoke_path="/etc/tz-bot/certs"
             fi
-            if $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains ${revoke_domain} --key-type rsa2048 list; then
+            if $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path $revoke_path --eab --domains ${revoke_domain} --key-type rsa2048 list; then
                 if yn_prompt "Would you like to continue with the revocation?"; then
-                $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains learning.alfassl.com --key-type rsa2048 revoke
+                $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path ${revoke_path} --eab --domains ${revoke_domain} --key-type rsa2048 revoke
+                renewal_management
                 else
                     echo "Revocation cancelled"
+                    renewal_management
                 fi
             else
                 echo "No certificate found, please verify the entered common name and try again"
+                renewal_management
             fi
             ;;
         8)
