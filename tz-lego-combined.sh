@@ -361,7 +361,7 @@ function renewal_management() {
             else
                 revoke_path="/etc/tz-bot/certs"
             fi
-            if$SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains ${revoke_domain} --key-type rsa2048 list; then
+            if $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains ${revoke_domain} --key-type rsa2048 list; then
                 if yn_prompt "Would you like to continue with the revocation?"; then
                 $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path /etc/tz-bot/certs --eab --domains learning.alfassl.com --key-type rsa2048 revoke
                 else
@@ -483,17 +483,17 @@ function uninstall() {
     echo -e "Welcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
     if yn_prompt "Are you sure you want to proceed?"; then
         echo "Uninstalling TZ-Bot and Lego..."
-        if$SUDO rm -rf /etc/tz-bot/; then
+        if $SUDO rm -rf /etc/tz-bot/; then
             echo "removed /etc/tz-bot/ and all contents inside"
         else
             echo "Error deleting /etc/tz-bot/"
         fi
-        if$SUDO rm -rf /usr/local/bin/tz-bot; then
+        if $SUDO rm -rf /usr/local/bin/tz-bot; then
             echo "removed /usr/local/bin/tz-bot"
         else
             echo "Error deleting /usr/local/bin/tz-bot"
         fi
-        if$SUDO rm -rf /usr/local/bin/lego; then
+        if $SUDO rm -rf /usr/local/bin/lego; then
             echo "Lego have been uninstalled successfully."
         else
             echo "Error deleting /usr/local/bin/lego"
