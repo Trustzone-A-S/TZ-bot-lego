@@ -8,7 +8,7 @@ function cronjob() {
         if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
             echo "Selecting automatic renewal"
-            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
+            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 1> /etc/tz-bot/log.txt 2> /etc/tz-bot/err.txt'
             (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
             echo ""
             echo "Renewal options: "
