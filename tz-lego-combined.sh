@@ -244,7 +244,7 @@ function upkeep() {
     if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
         SUDO="sudo"
         echo "Sudo test completed." 
-        echo "Using Sudo."
+        echo "Status: Using Sudo."
     else
         echo "Sudo test completed. "
         echo "Status: Not using Sudo."
