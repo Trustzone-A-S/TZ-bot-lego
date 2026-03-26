@@ -243,9 +243,11 @@ function upkeep() {
     echo "Testing sudo"
     if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
         SUDO="sudo"
-        echo "Sudo test completed. Using Sudo."
+        echo "Sudo test completed." 
+        echo "Using Sudo."
     else
-        echo "Sudo test failed. Not using Sudo."
+        echo "Sudo test completed. "
+        echo "Status: Not using Sudo."
     fi
 }
 function yn_prompt() {
