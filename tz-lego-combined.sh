@@ -1,7 +1,5 @@
 #!/bin/bash
 set -f
-#!/bin/bash
-
 function cronjob() {
     if cron="true"; then
         echo
@@ -88,6 +86,17 @@ function auto_reload() {
     fi
 }
 function upkeep() {
+    SUDO=""
+    echo "Testing sudo"
+    if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
+        SUDO="sudo"
+        echo "Sudo test completed." 
+        echo "Status: Using Sudo."
+    else
+        echo "Sudo test completed. "
+        echo "Status: Not using Sudo."
+    fi
+    
     local_version="1.6.4"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
@@ -238,16 +247,6 @@ function upkeep() {
         $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
         chmod 600 /etc/tz-bot/scripts/renew_single.sh
         $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
-    fi
-    SUDO=""
-    echo "Testing sudo"
-    if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
-        SUDO="sudo"
-        echo "Sudo test completed." 
-        echo "Status: Using Sudo."
-    else
-        echo "Sudo test completed. "
-        echo "Status: Not using Sudo."
     fi
 }
 function yn_prompt() {
