@@ -374,7 +374,6 @@ function renewal_management() {
             ;;
     esac
 }
-}
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
         echo
