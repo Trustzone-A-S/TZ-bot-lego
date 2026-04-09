@@ -6,8 +6,8 @@ function cronjob() {
         if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
             echo "Selecting automatic renewal"
-            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 2> /dev/null' 
-            (crontab -l 2>/dev/null | grep -Fxq -- "$job") || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab - 
+            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 1> /etc/tz-bot/log.txt 2> /etc/tz-bot/err.txt # tz-bot-renewal'
+            (crontab -l 2>/dev/null | grep -Fq '# tz-bot-renewal' || crontab -l 2>/dev/null | grep -Fq '/etc/tz-bot/scripts/renewal.sh') || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab -
             echo ""
             echo "Renewal options: "
             echo "1. Setup automatic restart of webserver"
@@ -211,7 +211,7 @@ function upkeep() {
         sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         sudo echo "sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        sudo echo "sudo sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        sudo echo "sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         sudo chmod +x /etc/tz-bot/scripts/renewal_force.sh
         sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
@@ -228,7 +228,7 @@ function upkeep() {
         sudo echo "sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         sudo echo "sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         sudo echo "sudo cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        sudo echo "sudo sed -i 's/--days 30/--days 400/' renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        sudo echo "sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         sudo echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         sudo chmod +x /etc/tz-bot/scripts/renew_single.sh
         sudo echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
@@ -254,7 +254,7 @@ function yn_prompt() {
     done
 }
 function renewal_management() {
-    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Back"
+    echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Revoke a certificate\n8. Back"
     read -p "Enter choice [1-7]: " renewal_choice
     case $renewal_choice in
         1)
@@ -292,6 +292,7 @@ function renewal_management() {
             sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
             sudo bash /etc/tz-bot/scripts/renew_single.sh
             sudo rm -rf /etc/tz-bot/scripts/renew_single_list
+            renewal_management
             ;;
         5)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
@@ -345,6 +346,26 @@ function renewal_management() {
             fi
             ;;
         7)
+            read -p "Please input the common name of the certificate you want to revoke: " revoke_domain
+            if yn_prompt "Did you order this certificate using a custom path?"; then
+                read -p "Please enter the path: " revoke_path
+            else
+                revoke_path="/etc/tz-bot/certs"
+            fi
+            if sudo lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path $revoke_path --eab --domains ${revoke_domain} --key-type rsa2048 list; then
+                if yn_prompt "Would you like to continue with the revocation?"; then
+                    sudo lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path ${revoke_path} --eab --domains ${revoke_domain} --key-type rsa2048 revoke
+                    renewal_management
+                else
+                    echo "Revocation cancelled"
+                    renewal_management
+                fi
+            else
+                echo "No certificate found, please verify the entered common name and try again"
+                renewal_management
+            fi
+            ;;
+        8)
             cert_menu
             ;;
         *)
@@ -352,6 +373,7 @@ function renewal_management() {
             renewal_management
             ;;
     esac
+}
 }
 function read_credentials() {
     if test -f /etc/tz-bot/scripts/.user_credentials; then
