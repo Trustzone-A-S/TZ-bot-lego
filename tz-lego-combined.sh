@@ -623,7 +623,7 @@ function ordering() {
 }
 function new_cert() {
     # Prompt for validation method
-    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx" && read -p "Enter choice [1-2]: " server_type
+    echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx\nTip: If you don't see your service/server here, simply select any of the two. It is only used for recommending reload commands later, but you will have the option to use a custom command." && read -p "Enter choice [1-2]: " server_type
     #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
