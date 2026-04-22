@@ -86,7 +86,7 @@ function auto_reload() {
     fi
 }
 function upkeep() {
-    local_version="1.6.5"
+    local_version="1.6.6"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -437,7 +437,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your Cloudflare account email: " cloudflare_email && echo "export CLOUDFLARE_EMAIL=\"$cloudflare_email\"" > /etc/tz-bot/scripts/.cloudflare_credentials
-            read -p "Please enter your Cloudflare API Key: " cloudflare_api_key && echo "export CLOUDFLARE_API_KEY=\"$cloudflare_api_key\"" >> /etc/tz-bot/scripts/.cloudflare_credentials
+            read -p "Please enter your Cloudflare API Token: " cloudflare_api_token && echo "export CLOUDFLARE_DNS_API_TOKEN=\"$cloudflare_api_token\"" >> /etc/tz-bot/scripts/.cloudflare_credentials
             chmod 600 /etc/tz-bot/scripts/.cloudflare_credentials && . /etc/tz-bot/scripts/.cloudflare_credentials
             ;;
         4)
