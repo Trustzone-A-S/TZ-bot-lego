@@ -97,7 +97,7 @@ function upkeep() {
         echo "Status: Not using Sudo."
     fi
     
-    local_version="1.6.6"
+    local_version="1.6.7"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -190,6 +190,9 @@ function upkeep() {
     if ! [ -e "/etc/tz-bot/scripts/.infoblox_credentials" ] ; then
         touch /etc/tz-bot/scripts/.infoblox_credentials
     fi
+    if ! [ -e "/etc/tz-bot/scripts/.godaddy_credentials" ] ; then
+        touch /etc/tz-bot/scripts/.godaddy_credentials
+    fi
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ] ; then
         touch /etc/tz-bot/scripts/renewal_list
         chmod 600 /etc/tz-bot/scripts/renewal_list
@@ -205,6 +208,7 @@ function upkeep() {
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
@@ -221,6 +225,7 @@ function upkeep() {
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
@@ -238,6 +243,7 @@ function upkeep() {
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
@@ -266,7 +272,7 @@ function yn_prompt() {
 }
 function renewal_management() {
     echo -e "\nRenewal management:\n1. List renewals\n2. Run renewal script\n3. Forcefully run renewal script\n4. Forcefully run a specific renewal\n5. Remove a cronjob renewal\n6. Remove all cronjob renewals\n7. Revoke a certificate\n8. Back"
-    read -p "Enter choice [1-7]: " renewal_choice
+    read -p "Enter choice [1-8]: " renewal_choice
     case $renewal_choice in
         1)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
@@ -380,7 +386,7 @@ function renewal_management() {
             cert_menu
             ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-7.\nRetrying"
+            echo -e "Error: Please only enter numbers in the range 1-8.\nRetrying"
             renewal_management
             ;;
     esac
@@ -406,8 +412,8 @@ function read_credentials() {
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
-    echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox"
-    read -p "Enter choice [1-5]: " renewal_choice
+    echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox\n6. GoDaddy"
+    read -p "Enter choice [1-6]: " renewal_choice
     echo ""
     case $renewal_choice in
         1)
@@ -478,8 +484,21 @@ function dns_full() {
             read -p "Please enter your Infoblox host: " infoblox_host && echo "export INFOBLOX_HOST=\"$infoblox_host\"" >> /etc/tz-bot/scripts/.infoblox_credentials
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
+        6)
+            val_var="--dns godaddy"
+            if grep -q "export GODADDY" "/etc/tz-bot/scripts/.godaddy_credentials"; then
+                if yn_prompt "Do you want to reuse saved GoDaddy credentials?"; then
+                    echo ""
+                    . /etc/tz-bot/scripts/.godaddy_credentials
+                    return
+                fi
+            fi
+            read -p "Please enter your GoDaddy API Key: " godaddy_api_key && echo "export GODADDY_API_KEY=\"$godaddy_api_key\"" > /etc/tz-bot/scripts/.godaddy_credentials
+            read -p "Please enter your GoDaddy API Secret: " godaddy_api_secret && echo "export GODADDY_API_SECRET=\"$godaddy_api_secret\"" >> /etc/tz-bot/scripts/.godaddy_credentials
+            chmod 600 /etc/tz-bot/scripts/.godaddy_credentials && . /etc/tz-bot/scripts/.godaddy_credentials
+            ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying"
+            echo -e "Error: Please only enter numbers in the range 1-6.\nRetrying"
             dns_full
             ;;
     esac
