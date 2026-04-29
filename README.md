@@ -3,7 +3,7 @@
 First, run the following command in your linux terminal to download and install TZ-Bot:
 
 ```bash
-sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh > /tmp/tz-bot && sudo bash /tmp/tz-bot
+sudo curl -L https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/sudoless/tz-lego-combined.sh > /tmp/tz-bot && sudo bash /tmp/tz-bot
 ```
 
 To run TZ-Bot:
