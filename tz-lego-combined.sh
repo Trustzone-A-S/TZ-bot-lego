@@ -1,7 +1,7 @@
 #!/bin/bash
 set -f
 function cronjob() {
-    if cron="true"; then
+    if [ "$cron" = "true" ]; then
         echo
         if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes" 
@@ -85,35 +85,33 @@ function auto_reload() {
         fi
     fi
 }
+version_gt() {
+    [ "$1" != "$2" ] && \
+    [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
+}
 function upkeep() {
     SUDO=""
     echo "Testing sudo"
-    if command -v sudo >/dev/null 2>&1 && sudo -n lego /root >/dev/null 2>&1; then
+    if command -v sudo >/dev/null 2>&1 && sudo -n lego >/dev/null 2>&1; then
         SUDO="sudo"
+        lego_var="-E lego"
         echo "Sudo test completed." 
         echo "Status: Using Sudo."
     else
         echo "Sudo test completed. "
         echo "Status: Not using Sudo."
+        lego_var="lego"
     fi
     
-    local_version="1.6.7"
-    if [ "$(id -u)" -ne 0 ]; then
-        echo 'This script must be run by root' >&2
-        exit 1
-    fi
+    local_version="1.6.8"
+
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
-    version_gt() {
-    [ "$1" != "$2" ] && \
-    [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
-    }
     remote_version=$(curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/sudoless/version.txt"  | tr -d '\r' | tr -d '\n' | xargs)
     if [ -z "$remote_version" ]; then
         echo "Error fetching remote version."
         echo "WARNING: Automatic updates disabled for current session"
-    fi
-    if version_gt "$remote_version" "$local_version"; then
+    elif version_gt "$remote_version" "$local_version"; then
         if yn_prompt "New version found: $remote_version. Do you want to update?"; then
             curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/sudoless/tz-lego-combined.sh" \
             -o "$SCRIPT_PATH.tmp" || exit 1
@@ -170,28 +168,29 @@ function upkeep() {
     fi
     mkdir -p /etc/tz-bot/scripts/ && mkdir -p /etc/tz-bot/certs/
     if ! [ -e "/etc/tz-bot/scripts/.ca" ] ; then
-        touch /etc/tz-bot/scripts/.ca && $SUDO echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
+        install -m 600 /dev/null /etc/tz-bot/scripts/.ca
+        echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
     fi
     if ! [ -e "/etc/tz-bot/scripts/storage" ] ; then
         touch /etc/tz-bot/scripts/storage
     fi
     if ! [ -e "/etc/tz-bot/scripts/.azure_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.azure_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.azure_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/.aws_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.aws_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.aws_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/.cloudflare_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.cloudflare_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.cloudflare_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/.domeneshop_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.domeneshop_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.domeneshop_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/.infoblox_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.infoblox_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.infoblox_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/.godaddy_credentials" ] ; then
-        touch /etc/tz-bot/scripts/.godaddy_credentials
+        install -m 600 /dev/null /etc/tz-bot/scripts/.godaddy_credentials
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ] ; then
         touch /etc/tz-bot/scripts/renewal_list
@@ -202,57 +201,51 @@ function upkeep() {
         chmod +x /etc/tz-bot/scripts/renewal_hook.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ] ; then
-        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
+        echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
         chmod 600 /etc/tz-bot/scripts/renewal.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal.sh
+        chmod +x /etc/tz-bot/scripts/renewal.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal_force.sh" ] ; then
-        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
+        echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal_force.sh
         chmod 600 /etc/tz-bot/scripts/renewal_force.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renewal_force.sh
+        chmod +x /etc/tz-bot/scripts/renewal_force.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renew_single.sh" ] ; then
-        $SUDO echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renewal.sh
-        $SUDO echo "$SUDO cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "$SUDO sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "chmod +x /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "bash /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
+        echo "rm -rf /etc/tz-bot/scripts/renew_temp.sh" >> /etc/tz-bot/scripts/renew_single.sh
         chmod 600 /etc/tz-bot/scripts/renew_single.sh
-        $SUDO chmod +x /etc/tz-bot/scripts/renew_single.sh
+        chmod +x /etc/tz-bot/scripts/renew_single.sh
     fi
 }
 function yn_prompt() {
@@ -264,9 +257,9 @@ function yn_prompt() {
         echo
 
         case "$answer" in
-            y|Y) return 0 ;;  # true
-            n|N) return 1 ;;  # false
-            *) echo "Please only input "y" or "n"" ;;
+            y|Y) return 0 ;;
+            n|N) return 1 ;;
+            *) echo "Please only input \"y\" or \"n\"" ;;
         esac
     done
 }
@@ -308,7 +301,7 @@ function renewal_management() {
             fi
             sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
         $SUDO bash /etc/tz-bot/scripts/renew_single.sh
-        $SUDO rm -rf /etc/tz-bot/scripts/renew_single_list
+        $SUDO rm -f /etc/tz-bot/scripts/renew_single_list
         renewal_management
             ;;
         5)
@@ -340,8 +333,8 @@ function renewal_management() {
                         fi
                     else
                         echo "Failed to remove renewal from script."
-                fi
-                renewal_management
+                    fi
+                    renewal_management
                 else
                     echo "Removal cancelled."
                     renewal_management
@@ -351,10 +344,10 @@ function renewal_management() {
         6)
             if yn_prompt "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."; then
             $SUDO rm /etc/tz-bot/scripts/renewal_hook.sh
-            $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh &&$SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+            $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh && $SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
             $SUDO rm /etc/tz-bot/scripts/renewal_list
             $SUDO touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
-            $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' |$SUDO crontab -
+            $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | $SUDO crontab -
                 echo "All renewals have been removed."
                 renewal_management
             else
@@ -369,9 +362,11 @@ function renewal_management() {
             else
                 revoke_path="/etc/tz-bot/certs"
             fi
-            if $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path $revoke_path --eab --domains ${revoke_domain} --key-type rsa2048 list; then
+            . /etc/tz-bot/scripts/.ca
+            . /etc/tz-bot/scripts/.user_credentials
+            if $SUDO lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "$revoke_path" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
                 if yn_prompt "Would you like to continue with the revocation?"; then
-                $SUDO lego --server https://emea.acme.atlas.globalsign.com/directory --email test123@test.com -a --dns manual --path ${revoke_path} --eab --domains ${revoke_domain} --key-type rsa2048 revoke
+                $SUDO lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
                 renewal_management
                 else
                     echo "Revocation cancelled"
@@ -404,12 +399,14 @@ function read_credentials() {
     fi
     echo ""
     read -p "Please enter your EAB Key ID: " eab_kid
-    read -p "Please enter your EAB HMAC Key: " eab_hmac
+    read -s -p "Please enter your EAB HMAC Key: " eab_hmac
+    echo
     echo "Please enter the common name(s) for the certificate"
     echo "Multiple sans can be input as a comma separated list"
     echo "Example: *.trustzone.com,trustzone.com"
     read -p "Input: " domain
-    echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials && chmod 600 /etc/tz-bot/scripts/.user_credentials
+    install -m 600 /dev/null /etc/tz-bot/scripts/.user_credentials
+    echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
     echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox\n6. GoDaddy"
@@ -425,7 +422,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your Azure Client ID: " azure_client_id && echo "export AZURE_CLIENT_ID=\"$azure_client_id\"" > /etc/tz-bot/scripts/.azure_credentials
-            read -p "Please enter your Azure Client Secret: " azure_client_secret && echo "export AZURE_CLIENT_SECRET=\"$azure_client_secret\"" >> /etc/tz-bot/scripts/.azure_credentials
+            read -s -p "Please enter your Azure Client Secret: " azure_client_secret && echo && echo "export AZURE_CLIENT_SECRET=\"$azure_client_secret\"" >> /etc/tz-bot/scripts/.azure_credentials
             read -p "Please enter your Azure Tenant ID: " azure_tenant_id && echo "export AZURE_TENANT_ID=\"$azure_tenant_id\"" >> /etc/tz-bot/scripts/.azure_credentials
             read -p "Please enter your Azure Subscription ID: " azure_subscription_id && echo "export AZURE_SUBSCRIPTION_ID=\"$azure_subscription_id\"" >> /etc/tz-bot/scripts/.azure_credentials
             echo "export AZURE_ENVIRONMENT=\"public\"" >> /etc/tz-bot/scripts/.azure_credentials && chmod 600 /etc/tz-bot/scripts/.azure_credentials && . /etc/tz-bot/scripts/.azure_credentials
@@ -440,7 +437,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your AWS Access Key ID: " aws_access_key_id && echo "export AWS_ACCESS_KEY_ID=\"$aws_access_key_id\"" > /etc/tz-bot/scripts/.aws_credentials
-            read -p "Please enter your AWS Secret Access Key: " aws_secret_access_key && echo "export AWS_SECRET_ACCESS_KEY=\"$aws_secret_access_key\"" >> /etc/tz-bot/scripts/.aws_credentials
+            read -s -p "Please enter your AWS Secret Access Key: " aws_secret_access_key && echo && echo "export AWS_SECRET_ACCESS_KEY=\"$aws_secret_access_key\"" >> /etc/tz-bot/scripts/.aws_credentials
             read -p "Please enter your AWS Region: " aws_region && echo "export AWS_REGION=\"$aws_region\"" >> /etc/tz-bot/scripts/.aws_credentials
             chmod 600 /etc/tz-bot/scripts/.aws_credentials && . /etc/tz-bot/scripts/.aws_credentials
             ;;
@@ -454,7 +451,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your Cloudflare account email: " cloudflare_email && echo "export CLOUDFLARE_EMAIL=\"$cloudflare_email\"" > /etc/tz-bot/scripts/.cloudflare_credentials
-            read -p "Please enter your Cloudflare API Token: " cloudflare_api_token && echo "export CLOUDFLARE_DNS_API_TOKEN=\"$cloudflare_api_token\"" >> /etc/tz-bot/scripts/.cloudflare_credentials
+            read -s -p "Please enter your Cloudflare API Token: " cloudflare_api_token && echo && echo "export CLOUDFLARE_DNS_API_TOKEN=\"$cloudflare_api_token\"" >> /etc/tz-bot/scripts/.cloudflare_credentials
             chmod 600 /etc/tz-bot/scripts/.cloudflare_credentials && . /etc/tz-bot/scripts/.cloudflare_credentials
             ;;
         4)
@@ -467,7 +464,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your Domeneshop API Token: " domeneshop_api_token && echo "export DOMENESHOP_API_TOKEN=\"$domeneshop_api_token\"" > /etc/tz-bot/scripts/.domeneshop_credentials
-            read -p "Please enter your Domeneshop API Secret: " domeneshop_api_secret && echo "export DOMENESHOP_API_SECRET=\"$domeneshop_api_secret\"" >> /etc/tz-bot/scripts/.domeneshop_credentials
+            read -s -p "Please enter your Domeneshop API Secret: " domeneshop_api_secret && echo && echo "export DOMENESHOP_API_SECRET=\"$domeneshop_api_secret\"" >> /etc/tz-bot/scripts/.domeneshop_credentials
             chmod 600 /etc/tz-bot/scripts/.domeneshop_credentials && . /etc/tz-bot/scripts/.domeneshop_credentials
             ;;
         5)
@@ -480,7 +477,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your Infoblox username: " infoblox_username && echo "export INFOBLOX_USERNAME=\"$infoblox_username\"" > /etc/tz-bot/scripts/.infoblox_credentials
-            read -p "Please enter your Infoblox password: " infoblox_password && echo "export INFOBLOX_PASSWORD=\"$infoblox_password\"" >> /etc/tz-bot/scripts/.infoblox_credentials
+            read -s -p "Please enter your Infoblox password: " infoblox_password && echo && echo "export INFOBLOX_PASSWORD=\"$infoblox_password\"" >> /etc/tz-bot/scripts/.infoblox_credentials
             read -p "Please enter your Infoblox host: " infoblox_host && echo "export INFOBLOX_HOST=\"$infoblox_host\"" >> /etc/tz-bot/scripts/.infoblox_credentials
             chmod 600 /etc/tz-bot/scripts/.infoblox_credentials && . /etc/tz-bot/scripts/.infoblox_credentials
             ;;
@@ -494,7 +491,7 @@ function dns_full() {
                 fi
             fi
             read -p "Please enter your GoDaddy API Key: " godaddy_api_key && echo "export GODADDY_API_KEY=\"$godaddy_api_key\"" > /etc/tz-bot/scripts/.godaddy_credentials
-            read -p "Please enter your GoDaddy API Secret: " godaddy_api_secret && echo "export GODADDY_API_SECRET=\"$godaddy_api_secret\"" >> /etc/tz-bot/scripts/.godaddy_credentials
+            read -s -p "Please enter your GoDaddy API Secret: " godaddy_api_secret && echo && echo "export GODADDY_API_SECRET=\"$godaddy_api_secret\"" >> /etc/tz-bot/scripts/.godaddy_credentials
             chmod 600 /etc/tz-bot/scripts/.godaddy_credentials && . /etc/tz-bot/scripts/.godaddy_credentials
             ;;
         *)
@@ -522,7 +519,7 @@ function uninstall() {
         else
             echo "Error deleting /usr/local/bin/lego"
         fi
-    $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' |$SUDO crontab -
+    $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | $SUDO crontab -
         if command -v tz-bot >/dev/null 2>&1; then
             echo "Uninstallation of TZ-bot failed. Please remove manually."
         else
@@ -652,9 +649,7 @@ function ordering() {
     cert_menu
 }
 function new_cert() {
-    # Prompt for validation method
     echo -e "\nWhich web server are you using?\n1: Apache\n2: Nginx\nTip: If you don't see your service/server here, simply select any of the two. It is only used for recommending reload commands later, but you will have the option to use a custom command." && read -p "Enter choice [1-2]: " server_type
-    #read -t 0.01 -n 10000 discard    
     case $server_type in
         1)
             val_var="--apache" && server="apache2" && echo -e "\nApache selected"
@@ -675,15 +670,15 @@ function validation() {
         echo -e "\nHow do you want to validate?\n1: Pre-validated domain\n2: DNS validation\n3: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-3]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="lego" && val_var="--dns manual" && echo -e "\nMODE: Pre-validated" && read_credentials
+                val_var="--dns manual" && echo -e "\nMODE: Pre-validated" && read_credentials
                 var_definition
                 ;;
             2)
-                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
+                echo -e "\nMODE: DNS" && read_credentials && dns_full
                 var_definition
                 ;;
             3)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "\nMODE: HTTP Validation" && read_credentials
+                val_var="--http --http.webroot /var/www/html/" && echo -e "\nMODE: HTTP Validation" && read_credentials
                 var_definition
                 ;;
             *)
@@ -730,7 +725,7 @@ function var_definition() {
     fi
     . /etc/tz-bot/scripts/.ca
     registration="--server $selected_ca --email test123@test.com -a"
-    eab="--eab --kid "${eab_kid:?}" --hmac "${eab_hmac:?}"" 
+    eab="--eab --kid "${eab_kid:?}" --hmac "${eab_hmac:?}""
 
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
