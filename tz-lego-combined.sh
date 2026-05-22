@@ -104,6 +104,10 @@ function upkeep() {
     fi
     
     local_version="1.6.8"
+    if [ "$(id -u)" -ne 0 ]; then
+        echo 'This script must be run by root' >&2
+        exit 1
+    fi
 
     echo "Welcome to TZ-Bot V$local_version"
     SCRIPT_PATH="$(readlink -f "$BASH_SOURCE")"
@@ -690,11 +694,11 @@ function validation() {
         echo -e "How do you want to validate?\n1: DNS validation\n2: HTTP Validation (Requires port 80 to be open)" && read -p "Enter choice [1-2]: " validation_choice
         case $validation_choice in
             1)
-                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
+                echo -e "\nMODE: DNS" && read_credentials && dns_full
                 var_definition
                 ;;
             2)
-                lego_var="lego" && val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: \nHTTP Validation" && read_credentials
+                val_var="--http --http.webroot /var/www/html/" && echo -e "MODE: \nHTTP Validation" && read_credentials
                 var_definition
                 ;;
             *)
