@@ -268,13 +268,21 @@ function renewal_management() {
             renewal_management
             ;;
         2)
-            echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
-            sudo bash /etc/tz-bot/scripts/renewal.sh
+            if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
+                echo -e "No renewals found."
+            else
+                echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
+                sudo bash /etc/tz-bot/scripts/renewal.sh
+            fi
             renewal_management
             ;;
         3)
-            echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
-            sudo bash /etc/tz-bot/scripts/renewal_force.sh
+            if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
+                echo -e "No renewals found."
+            else
+                echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
+                sudo bash /etc/tz-bot/scripts/renewal_force.sh
+            fi
             renewal_management
             ;;
         4)
