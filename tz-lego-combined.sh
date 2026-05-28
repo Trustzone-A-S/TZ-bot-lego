@@ -245,6 +245,8 @@ function upkeep() {
 function yn_prompt() {
     local prompt="$1"
     local answer
+
+    
     while true; do
         read -n 1 -r -p "$prompt (y/n): " answer
         echo
