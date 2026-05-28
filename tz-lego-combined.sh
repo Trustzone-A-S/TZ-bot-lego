@@ -183,6 +183,9 @@ function upkeep() {
     if ! [ -e "/etc/tz-bot/scripts/.godaddy_credentials" ] ; then
         install -m 600 /dev/null /etc/tz-bot/scripts/.godaddy_credentials
     fi
+    if ! [ -e "/etc/tz-bot/scripts/.scannet_credentials" ] ; then
+        install -m 600 /dev/null /etc/tz-bot/scripts/.scannet_credentials
+    fi
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ] ; then
         touch /etc/tz-bot/scripts/renewal_list
         chmod 600 /etc/tz-bot/scripts/renewal_list
@@ -408,8 +411,8 @@ function read_credentials() {
     echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials && echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials
 }
 function dns_full() {
-    echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox\n6. GoDaddy"
-    read -p "Enter choice [1-6]: " renewal_choice
+    echo -e "\nWhich DNS provider would you like to use?\n1. Azure DNS\n2. AWS/Route 53\n3. Cloudflare\n4. Domeneshop\n5. infoblox\n6. GoDaddy\n6. Scannet"
+    read -p "Enter choice [1-7]: " renewal_choice
     echo ""
     case $renewal_choice in
         1)
@@ -493,8 +496,20 @@ function dns_full() {
             read -s -p "Please enter your GoDaddy API Secret: " godaddy_api_secret && echo && echo "export GODADDY_API_SECRET=\"$godaddy_api_secret\"" >> /etc/tz-bot/scripts/.godaddy_credentials
             chmod 600 /etc/tz-bot/scripts/.godaddy_credentials && . /etc/tz-bot/scripts/.godaddy_credentials
             ;;
+        7)
+            val_var="--dns scannet"
+            if grep -q "export SCANNET" "/etc/tz-bot/scripts/.scannet_credentials"; then
+                if yn_prompt "Do you want to reuse saved scannet credentials?"; then
+                    echo ""
+                    . /etc/tz-bot/scripts/.scannet_credentials
+                    return
+                fi
+            fi
+            read -p "Please enter your scannet API Key: " scannet_api_key && echo "export SCANNET_API_KEY=\"$scannet_api_key\"" > /etc/tz-bot/scripts/.scannet_credentials
+            chmod 600 /etc/tz-bot/scripts/.scannet_credentials && . /etc/tz-bot/scripts/.scannet_credentials
+            ;;
         *)
-            echo -e "Error: Please only enter numbers in the range 1-6.\nRetrying"
+            echo -e "Error: Please only enter numbers in the range 1-7.\nRetrying"
             dns_full
             ;;
     esac
