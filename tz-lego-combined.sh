@@ -281,13 +281,21 @@ function renewal_management() {
             renewal_management
             ;;
         2)
-            echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
-        $SUDO bash /etc/tz-bot/scripts/renewal.sh
+            if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
+                echo -e "No renewals found."
+            else
+                echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
+                $SUDO bash /etc/tz-bot/scripts/renewal.sh
+            fi
             renewal_management
             ;;
         3)
-            echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
-        $SUDO bash /etc/tz-bot/scripts/renewal_force.sh
+            if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
+                echo -e "No renewals found."
+            else
+                echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
+                $SUDO bash /etc/tz-bot/scripts/renewal_force.sh
+            fi
             renewal_management
             ;;
         4)
@@ -304,9 +312,9 @@ function renewal_management() {
                 renewal_management
             fi
             sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
-        $SUDO bash /etc/tz-bot/scripts/renew_single.sh
-        $SUDO rm -f /etc/tz-bot/scripts/renew_single_list
-        renewal_management
+            $SUDO bash /etc/tz-bot/scripts/renew_single.sh
+            $SUDO rm -f /etc/tz-bot/scripts/renew_single_list
+            renewal_management
             ;;
         5)
             if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
@@ -347,11 +355,11 @@ function renewal_management() {
             ;;
         6)
             if yn_prompt "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."; then
-            $SUDO rm /etc/tz-bot/scripts/renewal_hook.sh
-            $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh && $SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
-            $SUDO rm /etc/tz-bot/scripts/renewal_list
-            $SUDO touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
-            $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | $SUDO crontab -
+                $SUDO rm /etc/tz-bot/scripts/renewal_hook.sh
+                $SUDO touch /etc/tz-bot/scripts/renewal_hook.sh && $SUDO chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+                $SUDO rm /etc/tz-bot/scripts/renewal_list
+                $SUDO touch /etc/tz-bot/scripts/renewal_list && chmod 600 /etc/tz-bot/scripts/renewal_list
+                $SUDO crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | $SUDO crontab -
                 echo "All renewals have been removed."
                 renewal_management
             else
@@ -370,8 +378,8 @@ function renewal_management() {
             . /etc/tz-bot/scripts/.user_credentials
             if $SUDO lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "$revoke_path" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
                 if yn_prompt "Would you like to continue with the revocation?"; then
-                $SUDO lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
-                renewal_management
+                    $SUDO lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
+                    renewal_management
                 else
                     echo "Revocation cancelled"
                     renewal_management
