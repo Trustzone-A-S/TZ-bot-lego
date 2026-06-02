@@ -574,8 +574,8 @@ function cert_menu() {
     esac
 }
 function notifications_menu() {
-    echo -e "Welcome to the notification settings. Please select from the list:\n1. Enable all notifications\n2. Enable ONLY renewal/issuance notifications\n3. Enable ONLY error notifications\nDisable notifications."
-    read -p "Enter choice [1-4]: " notifications_menu_choice
+    echo -e "\nNotifications Menu Options:\n1. Enable all notifications\n2. Enable ONLY renewal/issuance notifications\n3. Enable ONLY error notifications\n4. Disable notifications.\n5. Back\n"
+    read -p "Enter choice [1-5]: " notifications_menu_choice
     case $notifications_menu_choice in
         1)
             echo -e "You have selected: All notifications"
@@ -597,9 +597,12 @@ function notifications_menu() {
                 chmod +x /etc/tz-bot/scripts/notifications.sh
             fi
             ;;
+        5)
+            settings_menu
+            ;;  
         *)
-            echo -e "Error: Please only enter numbers in the range 1-4.\nRetrying"
-            dns_full
+            echo -e "Error: Please only enter numbers in the range 1-5.\nRetrying"
+            notifications_menu
             ;;
     esac
 }
