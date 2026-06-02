@@ -1,5 +1,8 @@
 #!/bin/bash
 set -f
+
+# sudo -E lego run --server https://emea.acme.atlas.globalsign.com/directory -a --dns manual --path /etc/tz-bot/certs --eab --eab.kid d87cde73ba31fa59 --eab.hmac p1FZf7v-31z64YzFJuxCfSZSOOSqdt2yVL0ITWoeGJXj0GHE99gfN27uMDB2YSNcl8J7UEU1eFmJyfaidc0RAguz6vE5wTXtYebbyVA1v-AJd7uwgkmUJBHp5GqgH7HROS6yHvACNFePDWXKSCScjsltCkvHYJYsmvWgRFNHnhs --domains learning.alfassl.com --key-type rsa2048
+
 function cronjob() {
     if cron="true"; then
         echo
@@ -193,6 +196,10 @@ function upkeep() {
     if ! [ -e "/etc/tz-bot/scripts/renewal_hook.sh" ] ; then
         touch /etc/tz-bot/scripts/renewal_hook.sh
         chmod +x /etc/tz-bot/scripts/renewal_hook.sh
+    fi
+    if ! [ -e "/etc/tz-bot/scripts/notifications.sh" ] ; then
+        touch /etc/tz-bot/scripts/notifications.sh
+        chmod +x /etc/tz-bot/scripts/notifications.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ] ; then
         echo "sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh" > /etc/tz-bot/scripts/renewal.sh
@@ -566,14 +573,47 @@ function cert_menu() {
             ;;
     esac
 }
+function notifications_menu() {
+    echo -e "Welcome to the notification settings. Please select from the list:\n1. Enable all notifications\n2. Enable ONLY renewal/issuance notifications\n3. Enable ONLY error notifications\nDisable notifications."
+    read -p "Enter choice [1-4]: " notifications_menu_choice
+    case $notifications_menu_choice in
+        1)
+            echo -e "You have selected: All notifications"
+            echo "notifications=full" > /etc/tz-bot/scripts/notifications.sh
+            ;;
+        2)
+            echo -e "You have selected: Renewal/Issuance notifications"
+            echo "notifications=issuance" > /etc/tz-bot/scripts/notifications.sh
+            ;;
+        3)
+            echo -e "You have selected: Error notifications"
+            echo "notifications=error" > /etc/tz-bot/scripts/notifications.sh
+            ;;
+        4)
+            echo -e "You have deselected all notifications"
+            sudo rm /etc/tz-bot/scripts/notifications.sh
+            if ! [ -e "/etc/tz-bot/scripts/notifications.sh" ] ; then
+                touch /etc/tz-bot/scripts/notifications.sh
+                chmod +x /etc/tz-bot/scripts/notifications.sh
+            fi
+            ;;
+        *)
+            echo -e "Error: Please only enter numbers in the range 1-4.\nRetrying"
+            dns_full
+            ;;
+    esac
+}
 function settings_menu() {
-    echo -e "\nSettings Menu Options:\n1. CA selection\n2. Uninstall TZ-Bot and Lego\n3. Help\n4. Back"
-    read -p "Enter choice [1-4]: " settings_menu_choice
+    echo -e "\nSettings Menu Options:\n1. CA selection\n2. Notifications\n3. Uninstall TZ-Bot and Lego\n4. Help\n5. Back"
+    read -p "Enter choice [1-5]: " settings_menu_choice
     case $settings_menu_choice in
         1)
             ca_selection
             ;;
         2)
+            notifications_menu
+            ;;
+        3)
             echo -e "You selected to uninstall TZ-Bot and Lego."
             if yn_prompt "Are you sure you want to proceed?"; then
                 echo -e "Proceeding to uninstall..."
@@ -583,12 +623,12 @@ function settings_menu() {
                 settings_menu
             fi
             ;;
-        3)
+        4)
             echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
             echo "support@trustzone.com"
             settings_menu
             ;;
-        4)
+        5)
             start_prompt
             ;;
         *)
