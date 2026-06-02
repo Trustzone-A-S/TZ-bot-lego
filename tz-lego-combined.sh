@@ -93,7 +93,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="1.6.8"
+    local_version="2.0"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -107,7 +107,7 @@ function upkeep() {
     fi
     if version_gt "$remote_version" "$local_version"; then
         if yn_prompt "New version found: $remote_version. Do you want to update?"; then
-            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/main/tz-lego-combined.sh" \
+            curl -fsSL "https://raw.githubusercontent.com/Trustzone-A-S/TZ-bot-lego/mainV2/tz-lego-combined.sh" \
             -o "$SCRIPT_PATH.tmp" || exit 1
             mv "$SCRIPT_PATH.tmp" "$SCRIPT_PATH" && chmod +x "$SCRIPT_PATH" && echo -e "\nUpdate done! Please run tz-bot again."
             exit 0
