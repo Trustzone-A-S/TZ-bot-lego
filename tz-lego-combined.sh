@@ -19,7 +19,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0"
+    local_version="2.0.1"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -264,12 +264,14 @@ function auto_reload() {
 }
 function uninstall() {
     echo -e "Welcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
+    echo ""
     if yn_prompt "Are you sure you want to uninstall TZ-Bot, Lego, and all certificates from /etc/tz-bot/certs?"; then
         echo "Proceeding.."
-        if yn_prompt "This will remove all certificates from /etc/tz-bot/certs! Continue?"; then
+        echo ""
+        if yn_prompt "This will remove ALL CERTIFICATES from /etc/tz-bot/certs! Continue?"; then
             echo "Uninstalling TZ-Bot and Lego..."
             for uninstall_file in /etc/tz-bot /usr/local/bin/tz-bot /usr/local/bin/lego; do
-                if sudo rm -f "$uninstall_file"; then
+                if sudo rm -rf "$uninstall_file"; then
                     echo "Removed "$uninstall_file""
                 else
                     echo "Error removing "$uninstall_file""
