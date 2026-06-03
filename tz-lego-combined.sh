@@ -19,7 +19,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.2"
+    local_version="2.0.3"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -106,11 +106,11 @@ function upkeep() {
         fi
     done
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ]; then
-        touch /etc/tz-bot/scripts/renewal_list
-        chmod 600 /etc/tz-bot/scripts/renewal_list
+        install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_list"
     fi
     for script_file in renewal_hook.sh notifications.sh; do
         if ! [ -e "/etc/tz-bot/scripts/$script_file" ]; then
+            install -m 600 /dev/null "/etc/tz-bot/scripts/$script_file"
             chmod +x "/etc/tz-bot/scripts/$script_file"
         fi
     done
