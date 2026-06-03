@@ -264,7 +264,7 @@ function auto_reload() {
 }
 function uninstall() {
     echo -e "Welcome to the TZ-Bot and Lego uninstaller.\nThis will uninstall TZ-Bot and Lego from your system.\nIt will also remove all certificates from /etc/tz-bot/certs/ and all scripts from /etc/tz-bot/scripts/"
-    if yn_prmopt "Are you sure you want to uninstall TZ-Bot, Lego, and all certificates from /etc/tz-bot/certs?"; then
+    if yn_prompt "Are you sure you want to uninstall TZ-Bot, Lego, and all certificates from /etc/tz-bot/certs?"; then
         echo "Proceeding.."
         if yn_prompt "This will remove all certificates from /etc/tz-bot/certs! Continue?"; then
             echo "Uninstalling TZ-Bot and Lego..."
@@ -284,10 +284,10 @@ function uninstall() {
             exit
         else
             echo "Uninstallation cancelled."
-            break
+            return
         fi
     else
-        break
+        return
     fi
 }
 function read_credentials() {
