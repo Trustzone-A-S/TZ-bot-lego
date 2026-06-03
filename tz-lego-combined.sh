@@ -19,7 +19,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.1"
+    local_version="2.0.2"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -270,25 +270,32 @@ function uninstall() {
         echo ""
         if yn_prompt "This will remove ALL CERTIFICATES from /etc/tz-bot/certs! Continue?"; then
             echo "Uninstalling TZ-Bot and Lego..."
-            for uninstall_file in /etc/tz-bot /usr/local/bin/tz-bot /usr/local/bin/lego; do
-                if sudo rm -rf "$uninstall_file"; then
-                    echo "Removed "$uninstall_file""
-                else
-                    echo "Error removing "$uninstall_file""
-                fi
-            done
-            sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
-            if command -v tz-bot >/dev/null 2>&1; then
-                echo "Uninstallation of TZ-bot failed. Please remove manually."
+            if sudo rm -rf /etc/tz-bot; then
+                echo "Removed /etc/tz-bot"
+                for uninstall_file in /usr/local/bin/tz-bot /usr/local/bin/lego; do
+                    if sudo rm -f "$uninstall_file"; then
+                        echo "Removed "$uninstall_file""
+                    else
+                        echo "Error removing "$uninstall_file""
+                        exit
+                    fi
+                    sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
+                    if command -v tz-bot >/dev/null 2>&1; then
+                        echo "Uninstallation of TZ-bot failed. Please remove manually."
+                    else
+                        echo "TZ-bot have been uninstalled successfully."
+                    fi
+                    exit
+                done
             else
-                echo "TZ-bot have been uninstalled successfully."
+                return
             fi
-            exit
         else
             echo "Uninstallation cancelled."
             return
         fi
     else
+        echo "Uninstallation cancelled."
         return
     fi
 }
