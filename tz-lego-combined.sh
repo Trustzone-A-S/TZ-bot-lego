@@ -1,6 +1,5 @@
 #!/bin/bash
 set -f
-# sudo -E lego run --server https://emea.acme.atlas.globalsign.com/directory -a --dns manual --path /etc/tz-bot/certs --eab --eab.kid d87cde73ba31fa59 --eab.hmac p1FZf7v-31z64YzFJuxCfSZSOOSqdt2yVL0ITWoeGJXj0GHE99gfN27uMDB2YSNcl8J7UEU1eFmJyfaidc0RAguz6vE5wTXtYebbyVA1v-AJd7uwgkmUJBHp5GqgH7HROS6yHvACNFePDWXKSCScjsltCkvHYJYsmvWgRFNHnhs --domains learning.alfassl.com --key-type rsa2048
 function yn_prompt() {
     local prompt="$1"
     local answer
@@ -19,7 +18,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.3"
+    local_version="2.0.4"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -487,7 +486,7 @@ function var_definition() {
         . /etc/tz-bot/scripts/.user_credentials
     fi
     . /etc/tz-bot/scripts/.ca
-    registration="--server $selected_ca --email test123@test.com -a"
+    registration="--server $selected_ca -a"
     eab="--eab --kid ${eab_kid:?} --hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
@@ -524,6 +523,7 @@ function var_definition() {
     ordering
 }
 function ordering() {
+    # sudo -E lego run --server https://emea.acme.atlas.globalsign.com/directory -a --dns manual --path /etc/tz-bot/certs --eab --eab.kid d87cde73ba31fa59 --eab.hmac p1FZf7v-31z64YzFJuxCfSZSOOSqdt2yVL0ITWoeGJXj0GHE99gfN27uMDB2YSNcl8J7UEU1eFmJyfaidc0RAguz6vE5wTXtYebbyVA1v-AJd7uwgkmUJBHp5GqgH7HROS6yHvACNFePDWXKSCScjsltCkvHYJYsmvWgRFNHnhs --domains learning.alfassl.com --key-type rsa2048
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
     echo "LEGO command: sudo ${lego_cmd[*]}"
     if sudo "${lego_cmd[@]}"; then
@@ -557,7 +557,7 @@ function validation() {
             read -p "Enter choice [1-3]: " validation_choice
             case $validation_choice in
                 1)
-                    lego_var="-E lego" && val_var="--dns manual"
+                    lego_var="-E lego run" && val_var="--dns manual"
                     echo -e "\nMODE: Pre-validated"
                     read_credentials
                     var_definition
@@ -571,7 +571,7 @@ function validation() {
                     return
                     ;;
                 3)
-                    lego_var="lego" && val_var="--http --http.webroot /var/www/html/"
+                    lego_var="lego run" && val_var="--http --http.webroot /var/www/html/"
                     echo -e "\nMODE: HTTP Validation"
                     read_credentials
                     var_definition
