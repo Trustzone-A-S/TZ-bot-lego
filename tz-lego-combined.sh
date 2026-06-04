@@ -486,8 +486,8 @@ function var_definition() {
         . /etc/tz-bot/scripts/.user_credentials
     fi
     . /etc/tz-bot/scripts/.ca
-    registration="--server $selected_ca -a"
-    eab="--eab --kid ${eab_kid:?} --hmac ${eab_hmac:?}"
+    registration="--server='$selected_ca' -a"
+    eab="--eab --eab.kid ${eab_kid:?} --eab.hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
     domain_renew_args=""
