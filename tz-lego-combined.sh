@@ -526,7 +526,7 @@ function ordering() {
     # sudo -E lego run --server https://emea.acme.atlas.globalsign.com/directory -a --dns manual --path /etc/tz-bot/certs --eab --eab.kid d87cde73ba31fa59 --eab.hmac p1FZf7v-31z64YzFJuxCfSZSOOSqdt2yVL0ITWoeGJXj0GHE99gfN27uMDB2YSNcl8J7UEU1eFmJyfaidc0RAguz6vE5wTXtYebbyVA1v-AJd7uwgkmUJBHp5GqgH7HROS6yHvACNFePDWXKSCScjsltCkvHYJYsmvWgRFNHnhs --domains learning.alfassl.com --key-type rsa2048
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
     echo "LEGO command: sudo ${lego_cmd[*]}"
-    if sudo "${lego_cmd[@]}"; then
+    if sudo "${lego_cmd[*]}"; then
         cronjob
     else
         echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
