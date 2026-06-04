@@ -504,7 +504,7 @@ function var_definition() {
     done
     domain_args="${domain_args# }"
     domain_renew_args="${domain_renew_args# }"
-    domain_var="$domain_args --key-type rsa2048 run"
+    domain_var="$domain_args --key-type rsa2048"
     if [[ "$custom_renewhook" == "yes" ]]; then
         domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
     else
@@ -588,7 +588,7 @@ function validation() {
             read -p "Enter choice [1-2]: " validation_choice
             case $validation_choice in
                 1)
-                    lego_var="-E lego"
+                    lego_var="-E lego run"
                     echo -e "\nMODE: DNS"
                     read_credentials
                     dns_full
@@ -596,7 +596,7 @@ function validation() {
                     return
                     ;;
                 2)
-                    lego_var="lego" && val_var="--http --http.webroot /var/www/html/"
+                    lego_var="lego run" && val_var="--http --http.webroot /var/www/html/"
                     echo -e "\nMODE: HTTP Validation"
                     read_credentials
                     var_definition
