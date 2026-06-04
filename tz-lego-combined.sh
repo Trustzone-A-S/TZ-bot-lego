@@ -284,8 +284,8 @@ function uninstall() {
                     else
                         echo "TZ-bot have been uninstalled successfully."
                     fi
-                    exit
                 done
+                exit
             else
                 return
             fi
