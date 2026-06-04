@@ -278,13 +278,13 @@ function uninstall() {
                         echo "Error removing "$uninstall_file""
                         exit
                     fi
-                    sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
+                done
+                sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
                     if command -v tz-bot >/dev/null 2>&1; then
                         echo "Uninstallation of TZ-bot failed. Please remove manually."
                     else
                         echo "TZ-bot have been uninstalled successfully."
                     fi
-                done
                 exit
             else
                 return
