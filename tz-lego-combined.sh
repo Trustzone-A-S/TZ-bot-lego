@@ -18,7 +18,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.5"
+    local_version="2.0.6"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -52,7 +52,7 @@ function upkeep() {
         echo "Lego is not installed."
         if yn_prompt "Do you want TZ-bot to try installing Lego?"; then
             echo -e "\nInstalling Lego..."
-            sudo curl -L "https://github.com/go-acme/lego/releases/download/v4.31.0/lego_v4.31.0_linux_386.tar.gz" -o /tmp/lego.tar.gz \
+            sudo curl -L "https://github.com/go-acme/lego/releases/download/v5.2.2/lego_v5.2.2_linux_386.tar.gz" -o /tmp/lego.tar.gz \
                 && sudo tar -xvzf /tmp/lego.tar.gz -C /tmp/ \
                 && sudo mkdir -p /usr/local/bin \
                 && sudo mv /tmp/lego /usr/local/bin/lego \
