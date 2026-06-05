@@ -1,5 +1,21 @@
 #!/bin/bash
 set -f
+CONFIG="/etc/tz-bot/scripts/config"
+CREDS="/etc/tz-bot/scripts/credentials"
+function config_set() {
+    local key="$1" val="$2" tmp
+    tmp=$(mktemp)
+    grep -v "^${key}=" "$CONFIG" 2>/dev/null > "$tmp" || true
+    printf '%s=%s\n' "$key" "$val" >> "$tmp"
+    mv "$tmp" "$CONFIG" && chmod 600 "$CONFIG"
+}
+function cred_set() {
+    local key="$1" val="$2" tmp
+    tmp=$(mktemp)
+    grep -v "^export ${key}=" "$CREDS" 2>/dev/null > "$tmp" || true
+    printf 'export %s="%s"\n' "$key" "$val" >> "$tmp"
+    mv "$tmp" "$CREDS" && chmod 600 "$CREDS"
+}
 function yn_prompt() {
     local prompt="$1"
     local answer
@@ -16,6 +32,57 @@ function yn_prompt() {
 version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
+}
+function migrate_legacy_files() {
+    local migrated=false
+    if [ -f "/etc/tz-bot/scripts/.ca" ]; then
+        local v
+        v=$(grep "^selected_ca=" /etc/tz-bot/scripts/.ca | cut -d= -f2-)
+        [ -n "$v" ] && config_set "selected_ca" "$v"
+        rm -f /etc/tz-bot/scripts/.ca
+        migrated=true
+    fi
+    if [ -f "/etc/tz-bot/scripts/storage" ]; then
+        local v
+        v=$(grep "^path=" /etc/tz-bot/scripts/storage | cut -d= -f2-)
+        [ -n "$v" ] && config_set "cert_path" "$v"
+        rm -f /etc/tz-bot/scripts/storage
+        migrated=true
+    fi
+    if [ -f "/etc/tz-bot/scripts/notifications.sh" ]; then
+        local v
+        v=$(grep "^notifications=" /etc/tz-bot/scripts/notifications.sh | cut -d= -f2-)
+        [ -n "$v" ] && config_set "notifications" "$v"
+        rm -f /etc/tz-bot/scripts/notifications.sh
+        migrated=true
+    fi
+    local old_cred_files=(
+        .user_credentials
+        .azure_credentials .aws_credentials .cloudflare_credentials
+        .domeneshop_credentials .infoblox_credentials
+        .godaddy_credentials .scannet_credentials
+    )
+    for fname in "${old_cred_files[@]}"; do
+        local fpath="/etc/tz-bot/scripts/$fname"
+        if [ -f "$fpath" ] && [ -s "$fpath" ]; then
+            while IFS= read -r line; do
+                [[ -z "$line" || "$line" == \#* ]] && continue
+                if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"[[:space:]]*$ ]]; then
+                    cred_set "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+                fi
+            done < "$fpath"
+            migrated=true
+        fi
+        rm -f "$fpath"
+    done
+    for s in renewal.sh renewal_force.sh renew_single.sh; do
+        if grep -q "azure_credentials\|aws_credentials\|cloudflare_credentials" \
+                "/etc/tz-bot/scripts/$s" 2>/dev/null; then
+            rm -f "/etc/tz-bot/scripts/$s"
+        fi
+    done
+    $migrated && echo "Note: configuration migrated to consolidated config + credentials files."
+    return 0
 }
 function upkeep() {
     local_version="2.0.6"
@@ -91,39 +158,30 @@ function upkeep() {
             cron="false"
         fi
     fi
+
     mkdir -p /etc/tz-bot/scripts/ && mkdir -p /etc/tz-bot/certs/
-    if ! [ -e "/etc/tz-bot/scripts/.ca" ]; then
-        install -m 600 /dev/null /etc/tz-bot/scripts/.ca
-        echo "selected_ca=https://emea.acme.atlas.globalsign.com/directory" > /etc/tz-bot/scripts/.ca
+    if ! [ -e "$CONFIG" ]; then
+        install -m 600 /dev/null "$CONFIG"
+        printf 'selected_ca=https://emea.acme.atlas.globalsign.com/directory\n' >> "$CONFIG"
+        printf 'cert_path=/etc/tz-bot/certs\n'                                  >> "$CONFIG"
+        printf 'notifications=\n'                                                >> "$CONFIG"
     fi
-    if ! [ -e "/etc/tz-bot/scripts/storage" ]; then
-        touch /etc/tz-bot/scripts/storage
+    if ! [ -e "$CREDS" ]; then
+        install -m 600 /dev/null "$CREDS"
     fi
-    for cred_file in .azure_credentials .aws_credentials .cloudflare_credentials .domeneshop_credentials .infoblox_credentials .godaddy_credentials .scannet_credentials; do
-        if ! [ -e "/etc/tz-bot/scripts/$cred_file" ]; then
-            install -m 600 /dev/null "/etc/tz-bot/scripts/$cred_file"
-        fi
-    done
+    migrate_legacy_files
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ]; then
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_list"
     fi
-    for script_file in renewal_hook.sh notifications.sh; do
-        if ! [ -e "/etc/tz-bot/scripts/$script_file" ]; then
-            install -m 600 /dev/null "/etc/tz-bot/scripts/$script_file"
-            chmod +x "/etc/tz-bot/scripts/$script_file"
-        fi
-    done
-
+    if ! [ -e "/etc/tz-bot/scripts/renewal_hook.sh" ]; then
+        install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_hook.sh"
+        chmod +x "/etc/tz-bot/scripts/renewal_hook.sh"
+    fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ]; then
         cat > /etc/tz-bot/scripts/renewal.sh << 'RENEWAL_EOF'
 #!/bin/bash
 sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
+sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
 sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
 bash /etc/tz-bot/scripts/renew_temp.sh
@@ -137,12 +195,7 @@ RENEWAL_EOF
         cat > /etc/tz-bot/scripts/renewal_force.sh << 'RENEWAL_FORCE_EOF'
 #!/bin/bash
 sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
+sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
 sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
 sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
@@ -157,12 +210,7 @@ RENEWAL_FORCE_EOF
         cat > /etc/tz-bot/scripts/renew_single.sh << 'RENEW_SINGLE_EOF'
 #!/bin/bash
 sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.azure_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.aws_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.cloudflare_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.domeneshop_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.infoblox_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/.godaddy_credentials' >> /etc/tz-bot/scripts/renew_temp.sh
+sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
 sudo cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh
 sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
@@ -273,18 +321,18 @@ function uninstall() {
                 echo "Removed /etc/tz-bot"
                 for uninstall_file in /usr/local/bin/tz-bot /usr/local/bin/lego; do
                     if sudo rm -f "$uninstall_file"; then
-                        echo "Removed "$uninstall_file""
+                        echo "Removed $uninstall_file"
                     else
-                        echo "Error removing "$uninstall_file""
+                        echo "Error removing $uninstall_file"
                         exit
                     fi
                 done
                 sudo crontab -l | grep -v '/etc/tz-bot/scripts/renewal.sh' | sudo crontab -
-                    if command -v tz-bot >/dev/null 2>&1; then
-                        echo "Uninstallation of TZ-bot failed. Please remove manually."
-                    else
-                        echo "TZ-bot have been uninstalled successfully."
-                    fi
+                if command -v tz-bot >/dev/null 2>&1; then
+                    echo "Uninstallation of TZ-bot failed. Please remove manually."
+                else
+                    echo "TZ-bot have been uninstalled successfully."
+                fi
                 exit
             else
                 return
@@ -299,9 +347,11 @@ function uninstall() {
     fi
 }
 function read_credentials() {
-    if test -f /etc/tz-bot/scripts/.user_credentials; then
+    # Check for saved EAB credentials in the consolidated file
+    if grep -q "^export eab_kid=" "$CREDS" 2>/dev/null; then
         echo
         if yn_prompt "Do you want to reuse saved EAB credentials?"; then
+            . "$CREDS"
             echo "Please enter the common name(s) for the certificate"
             echo "Multiple SANs can be input as a comma-separated list"
             echo "Example: *.trustzone.com,trustzone.com"
@@ -317,150 +367,120 @@ function read_credentials() {
     echo "Multiple SANs can be input as a comma-separated list"
     echo "Example: *.trustzone.com,trustzone.com"
     read -p "Input: " domain
-    install -m 600 /dev/null /etc/tz-bot/scripts/.user_credentials
-    echo "export eab_kid=\"$eab_kid\"" > /etc/tz-bot/scripts/.user_credentials
-    echo "export eab_hmac=\"$eab_hmac\"" >> /etc/tz-bot/scripts/.user_credentials
+    cred_set "eab_kid"  "$eab_kid"
+    cred_set "eab_hmac" "$eab_hmac"
 }
 function dns_full() {
-    while true; do
-        echo -e "\nWhich DNS provider would you like to use?"
-        echo "1. Azure DNS"
-        echo "2. AWS / Route 53"
-        echo "3. Cloudflare"
-        echo "4. Domeneshop"
-        echo "5. Infoblox"
-        echo "6. GoDaddy"
-        echo "7. Scannet"
-        read -p "Enter choice [1-7]: " dns_choice
-        echo ""
-        case $dns_choice in
-            1)
+    PS3=$'\nDNS provider: '
+    select opt in \
+        "Azure DNS" \
+        "AWS / Route 53" \
+        "Cloudflare" \
+        "Domeneshop" \
+        "Infoblox" \
+        "GoDaddy" \
+        "Scannet"; do
+        case $opt in
+            "Azure DNS")
                 val_var="--dns azuredns"
-                if grep -q "export AZURE" "/etc/tz-bot/scripts/.azure_credentials"; then
+                if grep -q "^export AZURE_CLIENT_ID=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved Azure credentials?"; then
-                        . /etc/tz-bot/scripts/.azure_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your Azure Client ID: " azure_client_id
-                echo "export AZURE_CLIENT_ID=\"$azure_client_id\"" > /etc/tz-bot/scripts/.azure_credentials
-                read -s -p "Please enter your Azure Client Secret: " azure_client_secret
-                echo && echo "export AZURE_CLIENT_SECRET=\"$azure_client_secret\"" >> /etc/tz-bot/scripts/.azure_credentials
-                read -p "Please enter your Azure Tenant ID: " azure_tenant_id
-                echo "export AZURE_TENANT_ID=\"$azure_tenant_id\"" >> /etc/tz-bot/scripts/.azure_credentials
-                read -p "Please enter your Azure Subscription ID: " azure_subscription_id
-                echo "export AZURE_SUBSCRIPTION_ID=\"$azure_subscription_id\"" >> /etc/tz-bot/scripts/.azure_credentials
-                echo "export AZURE_ENVIRONMENT=\"public\"" >> /etc/tz-bot/scripts/.azure_credentials
-                chmod 600 /etc/tz-bot/scripts/.azure_credentials
-                . /etc/tz-bot/scripts/.azure_credentials
-                return
+                read -p "Please enter your Azure Client ID: " v
+                cred_set "AZURE_CLIENT_ID" "$v"
+                read -s -p "Please enter your Azure Client Secret: " v; echo
+                cred_set "AZURE_CLIENT_SECRET" "$v"
+                read -p "Please enter your Azure Tenant ID: " v
+                cred_set "AZURE_TENANT_ID" "$v"
+                read -p "Please enter your Azure Subscription ID: " v
+                cred_set "AZURE_SUBSCRIPTION_ID" "$v"
+                cred_set "AZURE_ENVIRONMENT" "public"
+                . "$CREDS"; return
                 ;;
-            2)
+            "AWS / Route 53")
                 val_var="--dns route53"
-                if grep -q "export AWS" "/etc/tz-bot/scripts/.aws_credentials"; then
+                if grep -q "^export AWS_ACCESS_KEY_ID=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved AWS credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.aws_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your AWS Access Key ID: " aws_access_key_id
-                echo "export AWS_ACCESS_KEY_ID=\"$aws_access_key_id\"" > /etc/tz-bot/scripts/.aws_credentials
-                read -s -p "Please enter your AWS Secret Access Key: " aws_secret_access_key
-                echo && echo "export AWS_SECRET_ACCESS_KEY=\"$aws_secret_access_key\"" >> /etc/tz-bot/scripts/.aws_credentials
-                read -p "Please enter your AWS Region: " aws_region
-                echo "export AWS_REGION=\"$aws_region\"" >> /etc/tz-bot/scripts/.aws_credentials
-                chmod 600 /etc/tz-bot/scripts/.aws_credentials
-                . /etc/tz-bot/scripts/.aws_credentials
-                return
+                read -p "Please enter your AWS Access Key ID: " v
+                cred_set "AWS_ACCESS_KEY_ID" "$v"
+                read -s -p "Please enter your AWS Secret Access Key: " v; echo
+                cred_set "AWS_SECRET_ACCESS_KEY" "$v"
+                read -p "Please enter your AWS Region: " v
+                cred_set "AWS_REGION" "$v"
+                . "$CREDS"; return
                 ;;
-            3)
+            "Cloudflare")
                 val_var="--dns cloudflare"
-                if grep -q "export CLOUDFLARE" "/etc/tz-bot/scripts/.cloudflare_credentials"; then
+                if grep -q "^export CLOUDFLARE_EMAIL=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved Cloudflare credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.cloudflare_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your Cloudflare account email: " cloudflare_email
-                echo "export CLOUDFLARE_EMAIL=\"$cloudflare_email\"" > /etc/tz-bot/scripts/.cloudflare_credentials
-                read -s -p "Please enter your Cloudflare API Token: " cloudflare_api_token
-                echo && echo "export CLOUDFLARE_DNS_API_TOKEN=\"$cloudflare_api_token\"" >> /etc/tz-bot/scripts/.cloudflare_credentials
-                chmod 600 /etc/tz-bot/scripts/.cloudflare_credentials
-                . /etc/tz-bot/scripts/.cloudflare_credentials
-                return
+                read -p "Please enter your Cloudflare account email: " v
+                cred_set "CLOUDFLARE_EMAIL" "$v"
+                read -s -p "Please enter your Cloudflare API Token: " v; echo
+                cred_set "CLOUDFLARE_DNS_API_TOKEN" "$v"
+                . "$CREDS"; return
                 ;;
-            4)
+            "Domeneshop")
                 val_var="--dns domeneshop"
-                if grep -q "export DOMENESHOP" "/etc/tz-bot/scripts/.domeneshop_credentials"; then
+                if grep -q "^export DOMENESHOP_API_TOKEN=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved Domeneshop credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.domeneshop_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your Domeneshop API Token: " domeneshop_api_token
-                echo "export DOMENESHOP_API_TOKEN=\"$domeneshop_api_token\"" > /etc/tz-bot/scripts/.domeneshop_credentials
-                read -s -p "Please enter your Domeneshop API Secret: " domeneshop_api_secret
-                echo && echo "export DOMENESHOP_API_SECRET=\"$domeneshop_api_secret\"" >> /etc/tz-bot/scripts/.domeneshop_credentials
-                chmod 600 /etc/tz-bot/scripts/.domeneshop_credentials
-                . /etc/tz-bot/scripts/.domeneshop_credentials
-                return
+                read -p "Please enter your Domeneshop API Token: " v
+                cred_set "DOMENESHOP_API_TOKEN" "$v"
+                read -s -p "Please enter your Domeneshop API Secret: " v; echo
+                cred_set "DOMENESHOP_API_SECRET" "$v"
+                . "$CREDS"; return
                 ;;
-            5)
+            "Infoblox")
                 val_var="--dns infoblox"
-                if grep -q "export INFOBLOX" "/etc/tz-bot/scripts/.infoblox_credentials"; then
+                if grep -q "^export INFOBLOX_USERNAME=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved Infoblox credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.infoblox_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your Infoblox username: " infoblox_username
-                echo "export INFOBLOX_USERNAME=\"$infoblox_username\"" > /etc/tz-bot/scripts/.infoblox_credentials
-                read -s -p "Please enter your Infoblox password: " infoblox_password
-                echo && echo "export INFOBLOX_PASSWORD=\"$infoblox_password\"" >> /etc/tz-bot/scripts/.infoblox_credentials
-                read -p "Please enter your Infoblox host: " infoblox_host
-                echo "export INFOBLOX_HOST=\"$infoblox_host\"" >> /etc/tz-bot/scripts/.infoblox_credentials
-                chmod 600 /etc/tz-bot/scripts/.infoblox_credentials
-                . /etc/tz-bot/scripts/.infoblox_credentials
-                return
+                read -p "Please enter your Infoblox username: " v
+                cred_set "INFOBLOX_USERNAME" "$v"
+                read -s -p "Please enter your Infoblox password: " v; echo
+                cred_set "INFOBLOX_PASSWORD" "$v"
+                read -p "Please enter your Infoblox host: " v
+                cred_set "INFOBLOX_HOST" "$v"
+                . "$CREDS"; return
                 ;;
-            6)
+            "GoDaddy")
                 val_var="--dns godaddy"
-                if grep -q "export GODADDY" "/etc/tz-bot/scripts/.godaddy_credentials"; then
+                if grep -q "^export GODADDY_API_KEY=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved GoDaddy credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.godaddy_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your GoDaddy API Key: " godaddy_api_key
-                echo "export GODADDY_API_KEY=\"$godaddy_api_key\"" > /etc/tz-bot/scripts/.godaddy_credentials
-                read -s -p "Please enter your GoDaddy API Secret: " godaddy_api_secret
-                echo && echo "export GODADDY_API_SECRET=\"$godaddy_api_secret\"" >> /etc/tz-bot/scripts/.godaddy_credentials
-                chmod 600 /etc/tz-bot/scripts/.godaddy_credentials
-                . /etc/tz-bot/scripts/.godaddy_credentials
-                return
+                read -p "Please enter your GoDaddy API Key: " v
+                cred_set "GODADDY_API_KEY" "$v"
+                read -s -p "Please enter your GoDaddy API Secret: " v; echo
+                cred_set "GODADDY_API_SECRET" "$v"
+                . "$CREDS"; return
                 ;;
-            7)
+            "Scannet")
                 val_var="--dns scannet"
-                if grep -q "export SCANNET" "/etc/tz-bot/scripts/.scannet_credentials"; then
+                if grep -q "^export SCANNET_API_KEY=" "$CREDS" 2>/dev/null; then
                     if yn_prompt "Do you want to reuse saved Scannet credentials?"; then
-                        echo ""
-                        . /etc/tz-bot/scripts/.scannet_credentials
-                        return
+                        . "$CREDS"; return
                     fi
                 fi
-                read -p "Please enter your Scannet API Key: " scannet_api_key
-                echo "export SCANNET_API_KEY=\"$scannet_api_key\"" > /etc/tz-bot/scripts/.scannet_credentials
-                chmod 600 /etc/tz-bot/scripts/.scannet_credentials
-                . /etc/tz-bot/scripts/.scannet_credentials
-                return
+                read -s -p "Please enter your Scannet API Key: " v; echo
+                cred_set "SCANNET_API_KEY" "$v"
+                . "$CREDS"; return
                 ;;
             *)
-                echo "Error: Please only enter numbers in the range 1-7."
+                echo "Invalid selection."
                 ;;
         esac
     done
@@ -474,19 +494,17 @@ function path_selection() {
         fi
         echo -e "\nCustom path selected: $custom_path"
         if yn_prompt "Continue with selected path?"; then
-            echo "path=$custom_path" > /etc/tz-bot/scripts/storage
-            . /etc/tz-bot/scripts/storage
-            path_var="--path $path"
+            config_set "cert_path" "$custom_path"
+            . "$CONFIG"
+            path_var="--path $cert_path"
             break
         fi
     done
 }
 function var_definition() {
-    if [ -f /etc/tz-bot/scripts/.user_credentials ]; then
-        . /etc/tz-bot/scripts/.user_credentials
-    fi
-    . /etc/tz-bot/scripts/.ca
-    registration="--server='$selected_ca' -a"
+    . "$CONFIG"
+    . "$CREDS"
+    registration="--server $selected_ca -a"
     eab="--eab --eab.kid ${eab_kid:?} --eab.hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
@@ -515,18 +533,15 @@ function var_definition() {
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
         path_selection
     else
-        echo -e "\nUsing default path for certificate storage: /etc/tz-bot/certs/"
-        echo "path=/etc/tz-bot/certs" > /etc/tz-bot/scripts/storage
-        . /etc/tz-bot/scripts/storage
-        path_var="--path $path"
+        echo -e "\nUsing default path for certificate storage: $cert_path"
+        path_var="--path $cert_path"
     fi
     ordering
 }
 function ordering() {
-    # sudo -E lego run --server https://emea.acme.atlas.globalsign.com/directory -a --dns manual --path /etc/tz-bot/certs --eab --eab.kid d87cde73ba31fa59 --eab.hmac p1FZf7v-31z64YzFJuxCfSZSOOSqdt2yVL0ITWoeGJXj0GHE99gfN27uMDB2YSNcl8J7UEU1eFmJyfaidc0RAguz6vE5wTXtYebbyVA1v-AJd7uwgkmUJBHp5GqgH7HROS6yHvACNFePDWXKSCScjsltCkvHYJYsmvWgRFNHnhs --domains learning.alfassl.com --key-type rsa2048
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
     echo "LEGO command: sudo ${lego_cmd[*]}"
-    if sudo "${lego_cmd[*]}"; then
+    if sudo "${lego_cmd[@]}"; then
         cronjob
     else
         echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
@@ -545,11 +560,12 @@ function ordering() {
             auto_reload
         fi
     fi
-    echo -e "\nYour certificate is here: $path"
+    echo -e "\nYour certificate is here: $cert_path"
 }
 function validation() {
     while true; do
-        if grep -q "https://emea.acme.atlas.globalsign.com/directory" "/etc/tz-bot/scripts/.ca"; then
+        . "$CONFIG"
+        if [[ "$selected_ca" == *"globalsign"* ]]; then
             echo -e "\nHow do you want to validate?"
             echo "1: Pre-validated domain"
             echo "2: DNS validation"
@@ -742,11 +758,11 @@ function renewal_management() {
                 else
                     revoke_path="/etc/tz-bot/certs"
                 fi
-                . /etc/tz-bot/scripts/.ca
-                . /etc/tz-bot/scripts/.user_credentials
-                if sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "$revoke_path" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
+                . "$CONFIG"
+                . "$CREDS"
+                if sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "$revoke_path" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
                     if yn_prompt "Would you like to continue with the revocation?"; then
-                        sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --kid "$eab_kid" --hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
+                        sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
                     else
                         echo "Revocation cancelled"
                     fi
@@ -776,7 +792,7 @@ function ca_selection() {
                 continue
                 ;;
         esac
-        if echo "selected_ca=$ca_select" > /etc/tz-bot/scripts/.ca; then
+        if config_set "selected_ca" "$ca_select"; then
             echo -e "\nSelected $ca_print as your Certificate Authority"
             break
         else
@@ -785,9 +801,11 @@ function ca_selection() {
         fi
     done
 }
+
 function notifications_menu() {
     while true; do
-        echo -e "\nNotifications Menu Options:"
+        . "$CONFIG"
+        echo -e "\nNotifications Menu Options (current: ${notifications:-not set}):"
         echo "1. Enable all notifications"
         echo "2. Enable ONLY renewal/issuance notifications"
         echo "3. Enable ONLY error notifications"
@@ -797,24 +815,22 @@ function notifications_menu() {
         read -p "Enter choice [1-5]: " notifications_menu_choice
         case $notifications_menu_choice in
             1)
-                echo "notifications=full" > /etc/tz-bot/scripts/notifications.sh
+                config_set "notifications" "full"
                 echo -e "You have selected: All notifications"
                 break
                 ;;
             2)
-                echo "notifications=issuance" > /etc/tz-bot/scripts/notifications.sh
+                config_set "notifications" "issuance"
                 echo -e "You have selected: Renewal/Issuance notifications"
                 break
                 ;;
             3)
-                echo "notifications=error" > /etc/tz-bot/scripts/notifications.sh
+                config_set "notifications" "error"
                 echo -e "You have selected: Error notifications"
                 break
                 ;;
             4)
-                sudo rm -f /etc/tz-bot/scripts/notifications.sh
-                touch /etc/tz-bot/scripts/notifications.sh
-                chmod +x /etc/tz-bot/scripts/notifications.sh
+                config_set "notifications" ""
                 echo -e "You have deselected all notifications"
                 break
                 ;;
@@ -907,5 +923,6 @@ function start_prompt() {
         esac
     done
 }
+
 upkeep
 start_prompt
