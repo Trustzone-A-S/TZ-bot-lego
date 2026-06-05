@@ -34,7 +34,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.13"
+    local_version="2.0.14"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -133,7 +133,7 @@ sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.
 sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
 bash /etc/tz-bot/scripts/renew_temp.sh
-rm -rf /etc/tz-bot/scripts/renew_temp.sh
+rm -f /etc/tz-bot/scripts/renew_temp.sh
 RENEWAL_EOF
         chmod 600 /etc/tz-bot/scripts/renewal.sh
         chmod +x /etc/tz-bot/scripts/renewal.sh
@@ -144,11 +144,10 @@ RENEWAL_EOF
 #!/bin/bash
 sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
 sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
-sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh
+sudo sed 's/$/ --renew-force/' /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
 bash /etc/tz-bot/scripts/renew_temp.sh
-rm -rf /etc/tz-bot/scripts/renew_temp.sh
+rm -f /etc/tz-bot/scripts/renew_temp.sh
 RENEWAL_FORCE_EOF
         chmod 600 /etc/tz-bot/scripts/renewal_force.sh
         chmod +x /etc/tz-bot/scripts/renewal_force.sh
@@ -159,11 +158,10 @@ RENEWAL_FORCE_EOF
 #!/bin/bash
 sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
 sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo cat /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh
-sudo sed -i 's/--days 30/--days 400/' /etc/tz-bot/scripts/renew_temp.sh
+sudo sed 's/$/ --renew-force/' /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh
 chmod +x /etc/tz-bot/scripts/renew_temp.sh
 bash /etc/tz-bot/scripts/renew_temp.sh
-rm -rf /etc/tz-bot/scripts/renew_temp.sh
+rm -f /etc/tz-bot/scripts/renew_temp.sh
 RENEW_SINGLE_EOF
         chmod 600 /etc/tz-bot/scripts/renew_single.sh
         chmod +x /etc/tz-bot/scripts/renew_single.sh
@@ -685,15 +683,11 @@ function renewal_management() {
                 fi
                 . "$CONFIG"
                 . "$CREDS"
-                if sudo lego --server "$selected_ca" -a --dns manual --path "$revoke_path" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
-                    if yn_prompt "Would you like to continue with the revocation?"; then
-                        sudo lego --server "$selected_ca" -a --dns manual --path "${revoke_path}" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
+                    if yn_prompt "Are you sure you would like to revoke? This action is irreversible!"; then
+                        sudo lego certificates revoke --server "$selected_ca" --cert.name "${revoke_domain}"  --path "$revoke_path" --reason 0
                     else
                         echo "Revocation cancelled"
                     fi
-                else
-                    echo "No certificate found, please verify the entered common name and try again"
-                fi
                 ;;
             8)
                 break
