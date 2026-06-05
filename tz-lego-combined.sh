@@ -34,7 +34,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.10"
+    local_version="2.0.11"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -472,9 +472,9 @@ function var_definition() {
     domain_renew_args="${domain_renew_args# }"
     domain_var="$domain_args --key-type rsa2048"
     if [[ "$custom_renewhook" == "yes" ]]; then
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
+        domain_renew_var="$domain_renew_args --key-type rsa2048 --deploy-hook='sudo bash $renewal_hook_script'"
     else
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+        domain_renew_var="$domain_renew_args --key-type rsa2048 --deploy-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
     fi
     renewal="no"
     echo
@@ -741,8 +741,9 @@ function ordering() {
         if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
+            local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var)
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
-            echo "sudo $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
+            echo "${lego_cmd_renew[*]" >> /etc/tz-bot/scripts/renewal_list
         fi
         if [[ "$automatic_restart" == "yes" ]]; then
             auto_reload
