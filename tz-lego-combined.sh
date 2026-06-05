@@ -34,7 +34,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.8"
+    local_version="2.0.9"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -118,7 +118,6 @@ function upkeep() {
     if ! [ -e "$CREDS" ]; then
         install -m 600 /dev/null "$CREDS"
     fi
-    migrate_legacy_files
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ]; then
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_list"
     fi
@@ -453,7 +452,7 @@ function path_selection() {
 function var_definition() {
     . "$CONFIG"
     . "$CREDS"
-    registration="--server $selected_ca -a"
+    registration="--server='$selected_ca' -a"
     eab="--eab --eab.kid ${eab_kid:?} --eab.hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
@@ -505,6 +504,7 @@ function validation() {
                     return
                     ;;
                 2)
+                    lego_var="-E lego run"
                     echo -e "\nMODE: DNS"
                     read_credentials
                     dns_full
@@ -685,9 +685,9 @@ function renewal_management() {
                 fi
                 . "$CONFIG"
                 . "$CREDS"
-                if sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "$revoke_path" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
+                if sudo lego --server "$selected_ca" -a --dns manual --path "$revoke_path" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 list; then
                     if yn_prompt "Would you like to continue with the revocation?"; then
-                        sudo lego --server "$selected_ca" --email test123@test.com -a --dns manual --path "${revoke_path}" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
+                        sudo lego --server "$selected_ca" -a --dns manual --path "${revoke_path}" --eab --eab.kid "$eab_kid" --eab.hmac "$eab_hmac" --domains "${revoke_domain}" --key-type rsa2048 revoke
                     else
                         echo "Revocation cancelled"
                     fi
@@ -709,9 +709,9 @@ function ca_selection() {
         echo -e "\n1. Globalsign\n2. Sectigo DV\n3. Sectigo OV"
         read -p "Enter choice [1-3]: " ca_select_choice
         case $ca_select_choice in
-            1) ca_select="https://emea.acme.atlas.globalsign.com/directory" ; ca_print="GlobalSign" ;;
-            2) ca_select="https://acme.sectigo.com/v2/DV"                   ; ca_print="Sectigo DV" ;;
-            3) ca_select="https://acme.sectigo.com/v2/OV"                   ; ca_print="Sectigo OV" ;;
+            1) ca_select="globalsign" ; ca_print="GlobalSign" ;;
+            2) ca_select="sectigo"    ; ca_print="Sectigo DV" ;;
+            3) ca_select="sectigoov"  ; ca_print="Sectigo OV" ;;
             *)
                 echo "Error: Please only enter numbers in the range 1-3."
                 continue
