@@ -85,7 +85,7 @@ function migrate_legacy_files() {
     return 0
 }
 function upkeep() {
-    local_version="2.0.6"
+    local_version="2.0.7"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
