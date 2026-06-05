@@ -33,59 +33,8 @@ version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
-function migrate_legacy_files() {
-    local migrated=false
-    if [ -f "/etc/tz-bot/scripts/.ca" ]; then
-        local v
-        v=$(grep "^selected_ca=" /etc/tz-bot/scripts/.ca | cut -d= -f2-)
-        [ -n "$v" ] && config_set "selected_ca" "$v"
-        rm -f /etc/tz-bot/scripts/.ca
-        migrated=true
-    fi
-    if [ -f "/etc/tz-bot/scripts/storage" ]; then
-        local v
-        v=$(grep "^path=" /etc/tz-bot/scripts/storage | cut -d= -f2-)
-        [ -n "$v" ] && config_set "cert_path" "$v"
-        rm -f /etc/tz-bot/scripts/storage
-        migrated=true
-    fi
-    if [ -f "/etc/tz-bot/scripts/notifications.sh" ]; then
-        local v
-        v=$(grep "^notifications=" /etc/tz-bot/scripts/notifications.sh | cut -d= -f2-)
-        [ -n "$v" ] && config_set "notifications" "$v"
-        rm -f /etc/tz-bot/scripts/notifications.sh
-        migrated=true
-    fi
-    local old_cred_files=(
-        .user_credentials
-        .azure_credentials .aws_credentials .cloudflare_credentials
-        .domeneshop_credentials .infoblox_credentials
-        .godaddy_credentials .scannet_credentials
-    )
-    for fname in "${old_cred_files[@]}"; do
-        local fpath="/etc/tz-bot/scripts/$fname"
-        if [ -f "$fpath" ] && [ -s "$fpath" ]; then
-            while IFS= read -r line; do
-                [[ -z "$line" || "$line" == \#* ]] && continue
-                if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"[[:space:]]*$ ]]; then
-                    cred_set "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
-                fi
-            done < "$fpath"
-            migrated=true
-        fi
-        rm -f "$fpath"
-    done
-    for s in renewal.sh renewal_force.sh renew_single.sh; do
-        if grep -q "azure_credentials\|aws_credentials\|cloudflare_credentials" \
-                "/etc/tz-bot/scripts/$s" 2>/dev/null; then
-            rm -f "/etc/tz-bot/scripts/$s"
-        fi
-    done
-    $migrated && echo "Note: configuration migrated to consolidated config + credentials files."
-    return 0
-}
 function upkeep() {
-    local_version="2.0.7"
+    local_version="2.0.8"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -538,30 +487,6 @@ function var_definition() {
     fi
     ordering
 }
-function ordering() {
-    local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
-    echo "LEGO command: sudo ${lego_cmd[*]}"
-    if sudo "${lego_cmd[@]}"; then
-        cronjob
-    else
-        echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
-        echo "You can also contact TRUSTZONE support at support@trustzone.com"
-        return
-    fi
-    if [[ $renewal == yes ]]; then
-        echo -e "\nChecking for existing renewal"
-        if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
-            echo "Renewal for $domain already exists in renewal list. Skipping addition."
-        else
-            echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
-            echo "sudo $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
-        fi
-        if [[ "$automatic_restart" == "yes" ]]; then
-            auto_reload
-        fi
-    fi
-    echo -e "\nYour certificate is here: $cert_path"
-}
 function validation() {
     while true; do
         . "$CONFIG"
@@ -801,7 +726,30 @@ function ca_selection() {
         fi
     done
 }
-
+function ordering() {
+    local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
+    echo "LEGO command: sudo ${lego_cmd[*]}"
+    if sudo "${lego_cmd[@]}"; then
+        cronjob
+    else
+        echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
+        echo "You can also contact TRUSTZONE support at support@trustzone.com"
+        return
+    fi
+    if [[ $renewal == yes ]]; then
+        echo -e "\nChecking for existing renewal"
+        if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
+            echo "Renewal for $domain already exists in renewal list. Skipping addition."
+        else
+            echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
+            echo "sudo $lego_var $registration $val_var $path_var --eab $domain_renew_var" >> /etc/tz-bot/scripts/renewal_list
+        fi
+        if [[ "$automatic_restart" == "yes" ]]; then
+            auto_reload
+        fi
+    fi
+    echo -e "\nYour certificate is here: $cert_path"
+}
 function notifications_menu() {
     while true; do
         . "$CONFIG"
