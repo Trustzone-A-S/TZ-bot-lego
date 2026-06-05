@@ -34,7 +34,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.15"
+    local_version="2.0.16"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -685,7 +685,7 @@ function renewal_management() {
                 . "$CREDS"
                     if yn_prompt "Are you sure you would like to revoke? This action is irreversible!"; then
                         if sudo lego certificates revoke --server "$selected_ca" --cert.name "${revoke_domain}"  --path "$revoke_path" --reason 0; then
-                            echo -E "Your certificate has been revoked. NOTE: The domain is still in the renewal list.\nIf you want to stop future renewals, make sure to remove the renewal in the renewal management menu!"
+                            echo -e "Your certificate has been revoked. NOTE: The domain is still in the renewal list.\nIf you want to stop future renewals, make sure to remove the renewal in the renewal management menu!"
                         else
                             echo "An error has occured. Please contact support@†rustzone.com"
                         fi
