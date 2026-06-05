@@ -90,7 +90,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="1.6.8"
+    local_version="1.6.9"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -689,7 +689,7 @@ function validation() {
                 var_definition
                 ;;
             2)
-                echo -e "\nMODE: DNS" && read_credentials && dns_full
+                lego_var="-E lego" && echo -e "\nMODE: DNS" && read_credentials && dns_full
                 var_definition
                 ;;
             3)
