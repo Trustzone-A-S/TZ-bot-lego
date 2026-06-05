@@ -34,7 +34,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="2.0.9"
+    local_version="2.0.10"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -111,7 +111,7 @@ function upkeep() {
     mkdir -p /etc/tz-bot/scripts/ && mkdir -p /etc/tz-bot/certs/
     if ! [ -e "$CONFIG" ]; then
         install -m 600 /dev/null "$CONFIG"
-        printf 'selected_ca=https://emea.acme.atlas.globalsign.com/directory\n' >> "$CONFIG"
+        printf 'selected_ca=globalsign\n' >> "$CONFIG"
         printf 'cert_path=/etc/tz-bot/certs\n'                                  >> "$CONFIG"
         printf 'notifications=\n'                                                >> "$CONFIG"
     fi
@@ -452,7 +452,7 @@ function path_selection() {
 function var_definition() {
     . "$CONFIG"
     . "$CREDS"
-    registration="--server='$selected_ca' -a"
+    registration="--server=$selected_ca -a"
     eab="--eab --eab.kid ${eab_kid:?} --eab.hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
