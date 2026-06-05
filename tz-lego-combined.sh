@@ -743,7 +743,7 @@ function ordering() {
         else
             local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var)
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
-            echo "${lego_cmd_renew[*]" >> /etc/tz-bot/scripts/renewal_list
+            echo "${lego_cmd_renew[*]}" >> /etc/tz-bot/scripts/renewal_list
         fi
         if [[ "$automatic_restart" == "yes" ]]; then
             auto_reload
