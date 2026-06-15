@@ -128,43 +128,52 @@ function upkeep() {
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ]; then
         cat > /etc/tz-bot/scripts/renewal.sh << 'RENEWAL_EOF'
 #!/bin/bash
-sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo cat /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
-chmod +x /etc/tz-bot/scripts/renew_temp.sh
-bash /etc/tz-bot/scripts/renew_temp.sh
-rm -f /etc/tz-bot/scripts/renew_temp.sh
+MODE="${1:-normal}"
+LINE_NUM="${2:-}"
+CREDS="/etc/tz-bot/scripts/credentials"
+LIST="/etc/tz-bot/scripts/renewal_list"
+
+if [ ! -f "$CREDS" ]; then
+    echo "Error: credentials file not found: $CREDS" >&2; exit 1
+fi
+. "$CREDS"
+
+if [ ! -f "$LIST" ] || ! grep -q "lego" "$LIST" 2>/dev/null; then
+    echo "No renewals found."; exit 0
+fi
+
+case "$MODE" in
+    normal)
+        while IFS= read -r cmd; do
+            [[ -z "$cmd" ]] && continue
+            bash -c "$cmd"
+        done < "$LIST"
+        ;;
+    force)
+        while IFS= read -r cmd; do
+            [[ -z "$cmd" ]] && continue
+            bash -c "$cmd --renew-force"
+        done < "$LIST"
+        ;;
+    single)
+        if [[ ! "$LINE_NUM" =~ ^[0-9]+$ ]]; then
+            echo "Error: 'single' mode requires a valid line number as the second argument." >&2; exit 1
+        fi
+        cmd=$(sed -n "${LINE_NUM}p" "$LIST")
+        if [ -z "$cmd" ]; then
+            echo "Error: no entry found at line $LINE_NUM in the renewal list." >&2; exit 1
+        fi
+        bash -c "$cmd --renew-force"
+        ;;
+    *)
+        echo "Error: unknown mode '$MODE'." >&2
+        echo "Usage: renewal.sh [normal|force|single <line_number>]" >&2
+        exit 1
+        ;;
+esac
 RENEWAL_EOF
         chmod 600 /etc/tz-bot/scripts/renewal.sh
         chmod +x /etc/tz-bot/scripts/renewal.sh
-    fi
-
-    if ! [ -e "/etc/tz-bot/scripts/renewal_force.sh" ]; then
-        cat > /etc/tz-bot/scripts/renewal_force.sh << 'RENEWAL_FORCE_EOF'
-#!/bin/bash
-sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo sed 's/$/ --renew-force/' /etc/tz-bot/scripts/renewal_list >> /etc/tz-bot/scripts/renew_temp.sh
-chmod +x /etc/tz-bot/scripts/renew_temp.sh
-bash /etc/tz-bot/scripts/renew_temp.sh
-rm -f /etc/tz-bot/scripts/renew_temp.sh
-RENEWAL_FORCE_EOF
-        chmod 600 /etc/tz-bot/scripts/renewal_force.sh
-        chmod +x /etc/tz-bot/scripts/renewal_force.sh
-    fi
-
-    if ! [ -e "/etc/tz-bot/scripts/renew_single.sh" ]; then
-        cat > /etc/tz-bot/scripts/renew_single.sh << 'RENEW_SINGLE_EOF'
-#!/bin/bash
-sudo echo '#!/bin/bash' > /etc/tz-bot/scripts/renew_temp.sh
-sudo echo '. /etc/tz-bot/scripts/credentials' >> /etc/tz-bot/scripts/renew_temp.sh
-sudo sed 's/$/ --renew-force/' /etc/tz-bot/scripts/renew_single_list >> /etc/tz-bot/scripts/renew_temp.sh
-chmod +x /etc/tz-bot/scripts/renew_temp.sh
-bash /etc/tz-bot/scripts/renew_temp.sh
-rm -f /etc/tz-bot/scripts/renew_temp.sh
-RENEW_SINGLE_EOF
-        chmod 600 /etc/tz-bot/scripts/renew_single.sh
-        chmod +x /etc/tz-bot/scripts/renew_single.sh
     fi
 }
 function cronjob() {
@@ -600,16 +609,16 @@ function renewal_management() {
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
                     echo -e "No renewals found."
                 else
-                    echo "Running renewal script at: /etc/tz-bot/scripts/renewal.sh"
-                    sudo bash /etc/tz-bot/scripts/renewal.sh
+                    echo "Running renewal script..."
+                    sudo bash /etc/tz-bot/scripts/renewal.sh normal
                 fi
                 ;;
             3)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
                     echo -e "No renewals found."
                 else
-                    echo "Running forceful renewal script at: /etc/tz-bot/scripts/renewal_force.sh"
-                    sudo bash /etc/tz-bot/scripts/renewal_force.sh
+                    echo "Force-renewing all certificates..."
+                    sudo bash /etc/tz-bot/scripts/renewal.sh force
                 fi
                 ;;
             4)
@@ -623,9 +632,7 @@ function renewal_management() {
                         echo "Only input whole numbers, e.g., '5'"
                         continue
                     fi
-                    sed -n "${renew_single}p" /etc/tz-bot/scripts/renewal_list > /etc/tz-bot/scripts/renew_single_list
-                    sudo bash /etc/tz-bot/scripts/renew_single.sh
-                    sudo rm -rf /etc/tz-bot/scripts/renew_single_list
+                    sudo bash /etc/tz-bot/scripts/renewal.sh single "$renew_single"
                 fi
                 ;;
             5)
