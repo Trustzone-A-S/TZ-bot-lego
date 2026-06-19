@@ -133,6 +133,10 @@ function upkeep() {
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_hook.sh"
         chmod +x "/etc/tz-bot/scripts/renewal_hook.sh"
     fi
+    # Regenerate notify.sh if it predates --show-error (no curl error detail on failure)
+    if ! grep -q "show-error" /etc/tz-bot/scripts/notify.sh 2>/dev/null; then
+        rm -f /etc/tz-bot/scripts/notify.sh
+    fi
     # Create notify.sh — standalone email sender used by renewal.sh and ordering()
     if ! [ -e "/etc/tz-bot/scripts/notify.sh" ]; then
         cat > /etc/tz-bot/scripts/notify.sh << 'NOTIFY_EOF'
@@ -194,7 +198,7 @@ if [[ -z "${smtp_host}" || -z "${smtp_to}" || -z "${smtp_from}" ]]; then
 fi
 
 # Build curl args — smtps:// for port 465, smtp:// + STARTTLS for everything else
-curl_args=(--silent --fail)
+curl_args=(--silent --show-error --fail)
 if [[ "${smtp_port:-587}" == "465" ]]; then
     curl_args+=(--url "smtps://${smtp_host}:465")
 else
@@ -715,33 +719,33 @@ function renewal_management() {
         case $renewal_choice in
             1)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                    echo -e "No renewals found."
+                    echo -e "\nNo renewals found."
                 else
-                    echo -e "Current cronjob renewals:"
+                    echo -e "\nCurrent cronjob renewals:"
                     awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
                 fi
                 ;;
             2)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                    echo -e "No renewals found."
+                    echo -e "\nNo renewals found."
                 else
-                    echo "Running renewal script..."
+                    echo "\nRunning renewal script..."
                     sudo bash /etc/tz-bot/scripts/renewal.sh normal
                 fi
                 ;;
             3)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                    echo -e "No renewals found."
+                    echo -e "\nNo renewals found."
                 else
-                    echo "Force-renewing all certificates..."
+                    echo "\nForce-renewing all certificates..."
                     sudo bash /etc/tz-bot/scripts/renewal.sh force
                 fi
                 ;;
             4)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                    echo -e "No renewals found."
+                    echo -e "\nNo renewals found."
                 else
-                    echo -e "Current cronjob renewals:"
+                    echo -e "\nCurrent cronjob renewals:"
                     awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
                     read -p "Please enter the NUMBER of the renewal you want to run: " renew_single
                     if ! [[ "$renew_single" =~ ^[0-9]+$ ]]; then
@@ -753,9 +757,9 @@ function renewal_management() {
                 ;;
             5)
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
-                    echo -e "No renewals found."
+                    echo -e "\nNo renewals found."
                 else
-                    echo -e "Current cronjob renewals:"
+                    echo -e "\nCurrent cronjob renewals:"
                     awk '{domain=""; wildcard=""; for(i=1;i<=NF;i++){if($i=="--domains"){d=$(i+1); if(d~/^\*\./){wildcard=d} else if(domain==""){domain=d}}} if(wildcard!=""){print NR ": " wildcard} else if(domain!=""){print NR ": " domain}}' /etc/tz-bot/scripts/renewal_list
                     read -p "Please enter the NUMBER of the renewal you want to remove: " remove_domain
                     if ! [[ "$remove_domain" =~ ^[0-9]+$ ]]; then
@@ -786,6 +790,7 @@ function renewal_management() {
                 fi
                 ;;
             6)
+                echo ""
                 if yn_prompt "Are you sure you want to remove ALL cronjob renewals? This action cannot be undone."; then
                     sudo rm /etc/tz-bot/scripts/renewal_hook.sh
                     sudo touch /etc/tz-bot/scripts/renewal_hook.sh && sudo chmod +x /etc/tz-bot/scripts/renewal_hook.sh
@@ -798,6 +803,7 @@ function renewal_management() {
                 fi
                 ;;
             7)
+                echo ""
                 read -p "Please input the common name of the certificate you want to revoke: " revoke_domain
                 if yn_prompt "Did you order this certificate using a custom path?"; then
                     read -p "Please enter the path: " revoke_path
