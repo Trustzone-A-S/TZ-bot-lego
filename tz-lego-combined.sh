@@ -118,6 +118,14 @@ function upkeep() {
     if ! [ -e "$CREDS" ]; then
         install -m 600 /dev/null "$CREDS"
     fi
+    # Add email notification keys to config if not already present (safe for upgrades)
+    grep -q "^notify_success=" "$CONFIG" 2>/dev/null || printf 'notify_success=false\n' >> "$CONFIG"
+    grep -q "^notify_error="   "$CONFIG" 2>/dev/null || printf 'notify_error=false\n'   >> "$CONFIG"
+    grep -q "^smtp_host="      "$CONFIG" 2>/dev/null || printf 'smtp_host=\n'           >> "$CONFIG"
+    grep -q "^smtp_port="      "$CONFIG" 2>/dev/null || printf 'smtp_port=587\n'        >> "$CONFIG"
+    grep -q "^smtp_from="      "$CONFIG" 2>/dev/null || printf 'smtp_from=\n'           >> "$CONFIG"
+    grep -q "^smtp_to="        "$CONFIG" 2>/dev/null || printf 'smtp_to=\n'             >> "$CONFIG"
+    grep -q "^smtp_user="      "$CONFIG" 2>/dev/null || printf 'smtp_user=\n'           >> "$CONFIG"
     if ! [ -e "/etc/tz-bot/scripts/renewal_list" ]; then
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_list"
     fi
@@ -125,49 +133,157 @@ function upkeep() {
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_hook.sh"
         chmod +x "/etc/tz-bot/scripts/renewal_hook.sh"
     fi
+    # Create notify.sh — standalone email sender used by renewal.sh and ordering()
+    if ! [ -e "/etc/tz-bot/scripts/notify.sh" ]; then
+        cat > /etc/tz-bot/scripts/notify.sh << 'NOTIFY_EOF'
+#!/bin/bash
+# TZ-Bot email notification helper.
+# Usage:
+#   notify.sh success <domain> <cert_file>
+#   notify.sh error   <domain> <details>
+#   notify.sh test
+TYPE="${1:-}"
+DOMAIN="${2:-unknown}"
+EXTRA="${3:-}"
+CONFIG="/etc/tz-bot/scripts/config"
+CREDS="/etc/tz-bot/scripts/credentials"
+[ -f "$CONFIG" ] && . "$CONFIG"
+[ -f "$CREDS"  ] && . "$CREDS"
+
+case "$TYPE" in
+    success)
+        [[ "${notify_success:-false}" != "true" ]] && exit 0
+        expiry_line=""
+        if [[ -n "$EXTRA" && -f "$EXTRA" ]]; then
+            raw=$(openssl x509 -enddate -noout -in "$EXTRA" 2>/dev/null | cut -d= -f2-)
+            [[ -n "$raw" ]] && expiry_line=$'\n'"Expires:     ${raw}"
+        fi
+        subject="[TZ-Bot] Certificate issued/renewed: ${DOMAIN}"
+        body="TZ-Bot has successfully issued or renewed a certificate.
+
+Domain:      ${DOMAIN}${expiry_line}
+Timestamp:   $(date '+%Y-%m-%d %H:%M:%S %Z')"
+        ;;
+    error)
+        [[ "${notify_error:-false}" != "true" ]] && exit 0
+        subject="[TZ-Bot] Certificate error: ${DOMAIN}"
+        body="TZ-Bot encountered an error during certificate issuance or renewal.
+
+Domain:      ${DOMAIN}
+Timestamp:   $(date '+%Y-%m-%d %H:%M:%S %Z')
+
+Details:
+${EXTRA:-No details available.}"
+        ;;
+    test)
+        subject="[TZ-Bot] Test notification"
+        body="This is a test notification from TZ-Bot.
+If you received this, email notifications are configured correctly.
+
+Timestamp:   $(date '+%Y-%m-%d %H:%M:%S %Z')"
+        ;;
+    *)
+        echo "Usage: notify.sh <success|error|test> [domain] [cert_file|details]" >&2
+        exit 1
+        ;;
+esac
+
+if [[ -z "${smtp_host}" || -z "${smtp_to}" || -z "${smtp_from}" ]]; then
+    echo "notify.sh: SMTP not configured (smtp_host, smtp_to, smtp_from required)." >&2
+    exit 1
+fi
+
+# Build curl args — smtps:// for port 465, smtp:// + STARTTLS for everything else
+curl_args=(--silent --fail)
+if [[ "${smtp_port:-587}" == "465" ]]; then
+    curl_args+=(--url "smtps://${smtp_host}:465")
+else
+    curl_args+=(--url "smtp://${smtp_host}:${smtp_port:-587}" --ssl-reqd)
+fi
+[[ -n "${smtp_user}" && -n "${smtp_password}" ]] && \
+    curl_args+=(--user "${smtp_user}:${smtp_password}")
+curl_args+=(--mail-from "${smtp_from}" --mail-rcpt "${smtp_to}" --upload-file -)
+
+curl "${curl_args[@]}" << EOF
+From: TZ-Bot <${smtp_from}>
+To: ${smtp_to}
+Subject: ${subject}
+Date: $(date -R)
+Content-Type: text/plain; charset=utf-8
+
+${body}
+EOF
+
+if [[ $? -eq 0 ]]; then
+    echo "Notification sent to ${smtp_to}"
+else
+    echo "notify.sh: Failed to send email — check SMTP settings." >&2
+    exit 1
+fi
+NOTIFY_EOF
+        chmod 600 /etc/tz-bot/scripts/notify.sh
+        chmod +x /etc/tz-bot/scripts/notify.sh
+    fi
+    # Regenerate renewal.sh if it predates notification support
+    if ! grep -q "NOTIFY=" /etc/tz-bot/scripts/renewal.sh 2>/dev/null; then
+        rm -f /etc/tz-bot/scripts/renewal.sh
+    fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ]; then
         cat > /etc/tz-bot/scripts/renewal.sh << 'RENEWAL_EOF'
 #!/bin/bash
+# Modes: normal (default, used by cron) | force | single <N>
 MODE="${1:-normal}"
 LINE_NUM="${2:-}"
 CREDS="/etc/tz-bot/scripts/credentials"
 LIST="/etc/tz-bot/scripts/renewal_list"
+NOTIFY="/etc/tz-bot/scripts/notify.sh"
 
-if [ ! -f "$CREDS" ]; then
-    echo "Error: credentials file not found: $CREDS" >&2; exit 1
-fi
-. "$CREDS"
+[ -f "$CREDS" ] && . "$CREDS"
 
 if [ ! -f "$LIST" ] || ! grep -q "lego" "$LIST" 2>/dev/null; then
     echo "No renewals found."; exit 0
 fi
 
+run_cmd() {
+    local cmd="$1"
+    local domain cert_path cert_domain cert_file log_excerpt
+    domain=$(echo "$cmd"    | grep -o -- '--domains [^ ]*' | head -1 | awk '{print $2}')
+    cert_path=$(echo "$cmd" | grep -o -- '--path [^ ]*'    | head -1 | awk '{print $2}')
+    cert_domain="${domain//\*./_.}"
+    cert_file="${cert_path}/certificates/${cert_domain}.crt"
+    if bash -c "$cmd"; then
+        [ -x "$NOTIFY" ] && "$NOTIFY" success "${domain:-unknown}" "${cert_file}"
+    else
+        log_excerpt=$(tail -5 /etc/tz-bot/err.txt 2>/dev/null || echo "No log available.")
+        [ -x "$NOTIFY" ] && "$NOTIFY" error "${domain:-unknown}" "${log_excerpt}"
+        return 1
+    fi
+}
+
 case "$MODE" in
     normal)
         while IFS= read -r cmd; do
             [[ -z "$cmd" ]] && continue
-            bash -c "$cmd"
+            run_cmd "$cmd"
         done < "$LIST"
         ;;
     force)
         while IFS= read -r cmd; do
             [[ -z "$cmd" ]] && continue
-            bash -c "$cmd --renew-force"
+            run_cmd "$cmd --renew-force"
         done < "$LIST"
         ;;
     single)
         if [[ ! "$LINE_NUM" =~ ^[0-9]+$ ]]; then
-            echo "Error: 'single' mode requires a valid line number as the second argument." >&2; exit 1
+            echo "Error: 'single' mode requires a valid line number." >&2; exit 1
         fi
         cmd=$(sed -n "${LINE_NUM}p" "$LIST")
-        if [ -z "$cmd" ]; then
-            echo "Error: no entry found at line $LINE_NUM in the renewal list." >&2; exit 1
-        fi
-        bash -c "$cmd --renew-force"
+        [ -z "$cmd" ] && { echo "Error: line $LINE_NUM not found." >&2; exit 1; }
+        run_cmd "$cmd --renew-force"
         ;;
     *)
         echo "Error: unknown mode '$MODE'." >&2
-        echo "Usage: renewal.sh [normal|force|single <line_number>]" >&2
+        echo "Usage: renewal.sh [normal|force|single <N>]" >&2
         exit 1
         ;;
 esac
@@ -733,12 +849,16 @@ function ca_selection() {
 }
 function ordering() {
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
+    local cert_domain="${domain//\*./_.}"
+    local cert_file="${cert_path}/certificates/${cert_domain}.crt"
     echo "LEGO command: sudo ${lego_cmd[*]}"
     if sudo "${lego_cmd[@]}"; then
+        bash /etc/tz-bot/scripts/notify.sh success "$domain" "$cert_file" &
         cronjob
     else
         echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
         echo "You can also contact TRUSTZONE support at support@trustzone.com"
+        bash /etc/tz-bot/scripts/notify.sh error "$domain" "Certificate request failed. Check the output above for details." &
         return
     fi
     if [[ $renewal == yes ]]; then
@@ -759,34 +879,66 @@ function ordering() {
 function notifications_menu() {
     while true; do
         . "$CONFIG"
-        echo -e "\nNotifications Menu Options (current: ${notifications:-not set}):"
-        echo "1. Enable all notifications"
-        echo "2. Enable ONLY renewal/issuance notifications"
-        echo "3. Enable ONLY error notifications"
-        echo "4. Disable notifications"
+        . "$CREDS" 2>/dev/null
+        echo -e "\nEmail Notifications:"
+        printf '  Success emails:  %s\n' "${notify_success:-false}"
+        printf '  Error emails:    %s\n' "${notify_error:-false}"
+        printf '  SMTP host:       %s\n' "${smtp_host:-(not set)}"
+        printf '  SMTP port:       %s\n' "${smtp_port:-587}"
+        printf '  From:            %s\n' "${smtp_from:-(not set)}"
+        printf '  To:              %s\n' "${smtp_to:-(not set)}"
+        echo ""
+        echo "1. Toggle success notifications  [${notify_success:-false}]"
+        echo "2. Toggle error notifications    [${notify_error:-false}]"
+        echo "3. Configure SMTP"
+        echo "4. Send test email"
         echo "5. Back"
         echo ""
-        read -p "Enter choice [1-5]: " notifications_menu_choice
-        case $notifications_menu_choice in
+        read -p "Enter choice [1-5]: " n_choice
+        case $n_choice in
             1)
-                config_set "notifications" "full"
-                echo -e "You have selected: All notifications"
-                break
+                if [[ "${notify_success:-false}" == "true" ]]; then
+                    config_set "notify_success" "false"
+                    echo "Success notifications disabled."
+                else
+                    config_set "notify_success" "true"
+                    echo "Success notifications enabled."
+                fi
+                . "$CONFIG"
                 ;;
             2)
-                config_set "notifications" "issuance"
-                echo -e "You have selected: Renewal/Issuance notifications"
-                break
+                if [[ "${notify_error:-false}" == "true" ]]; then
+                    config_set "notify_error" "false"
+                    echo "Error notifications disabled."
+                else
+                    config_set "notify_error" "true"
+                    echo "Error notifications enabled."
+                fi
+                . "$CONFIG"
                 ;;
             3)
-                config_set "notifications" "error"
-                echo -e "You have selected: Error notifications"
-                break
+                echo ""
+                read -p "SMTP host (e.g. smtp.office365.com) [${smtp_host:-(current)}]: " v
+                [[ -n "$v" ]] && config_set "smtp_host" "$v"
+                read -p "SMTP port [${smtp_port:-587}]  (587=STARTTLS  465=SSL): " v
+                [[ -n "$v" ]] && config_set "smtp_port" "$v"
+                read -p "From address [${smtp_from:-(current)}]: " v
+                [[ -n "$v" ]] && config_set "smtp_from" "$v"
+                read -p "To address (notification recipient) [${smtp_to:-(current)}]: " v
+                [[ -n "$v" ]] && config_set "smtp_to" "$v"
+                read -p "Auth username (blank to keep current): " v
+                [[ -n "$v" ]] && config_set "smtp_user" "$v"
+                read -s -p "Auth password (blank to keep current): " v; echo
+                [[ -n "$v" ]] && cred_set "smtp_password" "$v"
+                echo "SMTP settings saved."
+                . "$CONFIG"
+                . "$CREDS" 2>/dev/null
                 ;;
             4)
-                config_set "notifications" ""
-                echo -e "You have deselected all notifications"
-                break
+                echo "Sending test email..."
+                if bash /etc/tz-bot/scripts/notify.sh test; then
+                    echo "Check your inbox at ${smtp_to}."
+                fi
                 ;;
             5)
                 break
