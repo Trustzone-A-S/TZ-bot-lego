@@ -228,13 +228,15 @@ NOTIFY_EOF
         chmod 600 /etc/tz-bot/scripts/notify.sh
         chmod +x /etc/tz-bot/scripts/notify.sh
     fi
-    # Regenerate renewal.sh if it predates notification support
-    if ! grep -q "NOTIFY=" /etc/tz-bot/scripts/renewal.sh 2>/dev/null; then
+    # Regenerate renewal.sh if it predates notification support or the PATH export
+    if ! grep -q "NOTIFY=" /etc/tz-bot/scripts/renewal.sh 2>/dev/null || \
+       ! grep -q "^export PATH=" /etc/tz-bot/scripts/renewal.sh 2>/dev/null; then
         rm -f /etc/tz-bot/scripts/renewal.sh
     fi
     if ! [ -e "/etc/tz-bot/scripts/renewal.sh" ]; then
         cat > /etc/tz-bot/scripts/renewal.sh << 'RENEWAL_EOF'
 #!/bin/bash
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 # Modes: normal (default, used by cron) | force | single <N>
 MODE="${1:-normal}"
 LINE_NUM="${2:-}"
@@ -302,9 +304,10 @@ function cronjob() {
         if yn_prompt "Do you want to create a cronjob for automatic renewal?"; then
             renewal="yes"
             echo "Selecting automatic renewal"
-            job='0 6 * * * /etc/tz-bot/scripts/renewal.sh 1> /etc/tz-bot/log.txt 2> /etc/tz-bot/err.txt # tz-bot-renewal'
-            (crontab -l 2>/dev/null | grep -Fq '# tz-bot-renewal' || crontab -l 2>/dev/null | grep -Fq '/etc/tz-bot/scripts/renewal.sh') \
-                || (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab -
+            job='0 6 * * * PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin /etc/tz-bot/scripts/renewal.sh 1> /etc/tz-bot/log.txt 2> /etc/tz-bot/err.txt # tz-bot-renewal'
+            # Remove any existing entry (old format without PATH, or duplicate) before adding
+            crontab -l 2>/dev/null | grep -v '# tz-bot-renewal' | crontab -
+            (crontab -l 2>/dev/null; printf '%s\n' "$job") | crontab -
             echo ""
             echo "Renewal options: "
             echo "1. Setup automatic restart of webserver"
@@ -579,7 +582,7 @@ function path_selection() {
 function var_definition() {
     . "$CONFIG"
     . "$CREDS"
-    registration="--server='$selected_ca' -a"
+    registration="--server=$selected_ca -a"
     eab="--eab --eab.kid ${eab_kid:?} --eab.hmac ${eab_hmac:?}"
     IFS=',' read -r -a domain_array <<< "$domain"
     domain_args=""
@@ -814,7 +817,7 @@ function renewal_management() {
                 . "$CREDS"
                     if yn_prompt "Are you sure you would like to revoke? This action is irreversible!"; then
                         if sudo lego certificates revoke --server "$selected_ca" --cert.name "${revoke_domain}"  --path "$revoke_path" --reason 0; then
-                            echo -e "Your certificate has been revoked. NOTE: The domain is still in the renewal list.\nIf you want to stop future renewals, make sure to remove the renewal in the renewal management menu!"
+                            echo -e "Your certificate has been revoked.\nIf you want to stop future automated renewals, make sure to remove the renewal in the renewal management menu!"
                         else
                             echo "An error has occured. Please contact support@†rustzone.com"
                         fi
