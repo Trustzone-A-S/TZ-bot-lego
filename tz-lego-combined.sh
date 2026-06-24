@@ -33,8 +33,48 @@ version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
+function migrate_renewal_list() {
+    local list="/etc/tz-bot/scripts/renewal_list"
+    [[ ! -f "$list" ]] && return 0
+    # Detect v4-format entries by the presence of --kid (without the eab. prefix)
+    if ! grep -q ' --kid ' "$list" 2>/dev/null; then
+        return 0
+    fi
+    echo "Migrating renewal list from lego v4 to v5 format..."
+    local tmpfile
+    tmpfile=$(mktemp)
+    while IFS= read -r line; do
+        if echo "$line" | grep -q ' --kid '; then
+            # 1. Reformat EAB flags: --kid → --eab.kid, --hmac → --eab.hmac
+            line=$(echo "$line" | sed 's/ --kid / --eab.kid /g; s/ --hmac / --eab.hmac /g')
+            # 2. Move subcommand: insert 'run' directly after 'lego' (before any flags)
+            #    Guards against double-inserting if 'lego run' is already present.
+            if ! echo "$line" | grep -q ' lego run '; then
+                line=$(echo "$line" | sed 's/ lego / lego run /')
+            fi
+            # 3. Remove the v4 trailing 'renew --days N' subcommand
+            line=$(echo "$line" | sed 's/ renew --days [0-9][0-9]*//')
+            # 4. Update hook flag name
+            line=$(echo "$line" | sed 's/--renew-hook=/--deploy-hook=/g')
+            # 5. Map known CA URLs to their v5 shorthand aliases
+            line=$(echo "$line" | sed \
+                "s|--server='https://emea.acme.atlas.globalsign.com/directory'|--server=globalsign|g
+                 s|--server='https://acme.sectigo.com/v2/DV'|--server=sectigo|g
+                 s|--server='https://acme.sectigo.com/v2/OV'|--server=sectigoov|g")
+            # 6. Strip any remaining literal quotes around --server value (fallback)
+            line=$(echo "$line" | sed "s/--server='\([^']*\)'/--server=\1/g")
+            # 7. Remove --email argument
+            line=$(echo "$line" | sed 's/ --email [^ ]*//g')
+        fi
+        printf '%s\n' "$line"
+    done < "$list" > "$tmpfile"
+    mv "$tmpfile" "$list"
+    chmod 600 "$list"
+    echo "Renewal list migrated to v5 format successfully."
+}
+
 function upkeep() {
-    local_version="2.0.17"
+    local_version="2.0.18"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -85,6 +125,30 @@ function upkeep() {
                 echo -e "\nExiting."
                 exit 1
             fi
+        fi
+    fi
+    # Check lego major version — v5 is required for TZ-Bot 2.0 command syntax
+    lego_major=$(lego -v 2>&1 | sed -n 's/.*version \([0-9]*\)\..*/\1/p' | head -1)
+    if [[ -n "$lego_major" && "$lego_major" -lt 5 ]]; then
+        echo "---------WARNING---------"
+        echo "Lego v${lego_major} is installed. TZ-Bot 2.0 requires lego v5 or newer."
+        if yn_prompt "Do you want TZ-Bot to upgrade lego now?"; then
+            echo "Upgrading lego..."
+            if sudo curl -fsSL "https://github.com/go-acme/lego/releases/download/v5.2.2/lego_v5.2.2_linux_386.tar.gz" \
+                    -o /tmp/lego.tar.gz \
+                && sudo tar -xzf /tmp/lego.tar.gz -C /tmp/ \
+                && sudo mv -f /tmp/lego /usr/local/bin/lego \
+                && sudo chmod +x /usr/local/bin/lego; then
+                echo "Lego upgraded to v5 successfully."
+                migrate_renewal_list
+            else
+                echo "Lego upgrade failed. Please upgrade manually before continuing."
+                echo "https://go-acme.github.io/lego/installation/"
+                exit 1
+            fi
+        else
+            echo "Cannot continue — lego v5 is required. Please upgrade and restart TZ-Bot."
+            exit 1
         fi
     fi
     if lego -v >/dev/null 2>&1; then
@@ -817,7 +881,7 @@ function renewal_management() {
                 . "$CREDS"
                     if yn_prompt "Are you sure you would like to revoke? This action is irreversible!"; then
                         if sudo lego certificates revoke --server "$selected_ca" --cert.name "${revoke_domain}"  --path "$revoke_path" --reason 0; then
-                            echo -e "Your certificate has been revoked.\nIf you want to stop future automated renewals, make sure to remove the renewal in the renewal management menu!"
+                            echo -e "Your certificate has been revoked. NOTE: The domain is still in the renewal list.\nIf you want to stop future renewals, make sure to remove the renewal in the renewal management menu!"
                         else
                             echo "An error has occured. Please contact support@†rustzone.com"
                         fi
@@ -966,7 +1030,6 @@ function settings_menu() {
         echo "3. Uninstall TZ-Bot and Lego"
         echo "4. Help"
         echo "5. Back"
-        echo ""
         read -p "Enter choice [1-5]: " settings_menu_choice
         case $settings_menu_choice in
             1)
