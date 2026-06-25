@@ -33,6 +33,30 @@ version_gt() {
     [ "$1" != "$2" ] && \
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
+function read_secret() {
+    local prompt="$1"
+    local varname="$2"
+    local value=""
+    local char
+    printf '%s' "$prompt"
+    while IFS= read -r -s -n1 char; do
+        if [[ -z "$char" ]]; then
+            # Enter pressed — done
+            break
+        elif [[ "$char" == $'\x7f' || "$char" == $'\b' ]]; then
+            # Backspace — remove last character and erase the asterisk
+            if [[ -n "$value" ]]; then
+                value="${value%?}"
+                printf '\b \b'
+            fi
+        else
+            value+="$char"
+            printf '*'
+        fi
+    done
+    echo
+    printf -v "$varname" '%s' "$value"
+}
 function migrate_renewal_list() {
     local list="/etc/tz-bot/scripts/renewal_list"
     [[ ! -f "$list" ]] && return 0
@@ -503,7 +527,7 @@ function read_credentials() {
     fi
     echo ""
     read -p "Please enter your EAB Key ID: " eab_kid
-    read -s -p "Please enter your EAB HMAC Key: " eab_hmac
+    read_secret "Please enter your EAB HMAC Key: " eab_hmac
     echo
     echo "Please enter the common name(s) for the certificate"
     echo "Multiple SANs can be input as a comma-separated list"
@@ -532,7 +556,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your Azure Client ID: " v
                 cred_set "AZURE_CLIENT_ID" "$v"
-                read -s -p "Please enter your Azure Client Secret: " v; echo
+                read_secret "Please enter your Azure Client Secret: " v; echo
                 cred_set "AZURE_CLIENT_SECRET" "$v"
                 read -p "Please enter your Azure Tenant ID: " v
                 cred_set "AZURE_TENANT_ID" "$v"
@@ -550,7 +574,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your AWS Access Key ID: " v
                 cred_set "AWS_ACCESS_KEY_ID" "$v"
-                read -s -p "Please enter your AWS Secret Access Key: " v; echo
+                read_secret "Please enter your AWS Secret Access Key: " v; echo
                 cred_set "AWS_SECRET_ACCESS_KEY" "$v"
                 read -p "Please enter your AWS Region: " v
                 cred_set "AWS_REGION" "$v"
@@ -565,7 +589,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your Cloudflare account email: " v
                 cred_set "CLOUDFLARE_EMAIL" "$v"
-                read -s -p "Please enter your Cloudflare API Token: " v; echo
+                read_secret "Please enter your Cloudflare API Token: " v; echo
                 cred_set "CLOUDFLARE_DNS_API_TOKEN" "$v"
                 . "$CREDS"; return
                 ;;
@@ -578,7 +602,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your Domeneshop API Token: " v
                 cred_set "DOMENESHOP_API_TOKEN" "$v"
-                read -s -p "Please enter your Domeneshop API Secret: " v; echo
+                read_secret "Please enter your Domeneshop API Secret: " v; echo
                 cred_set "DOMENESHOP_API_SECRET" "$v"
                 . "$CREDS"; return
                 ;;
@@ -591,7 +615,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your Infoblox username: " v
                 cred_set "INFOBLOX_USERNAME" "$v"
-                read -s -p "Please enter your Infoblox password: " v; echo
+                read_secret "Please enter your Infoblox password: " v; echo
                 cred_set "INFOBLOX_PASSWORD" "$v"
                 read -p "Please enter your Infoblox host: " v
                 cred_set "INFOBLOX_HOST" "$v"
@@ -606,7 +630,7 @@ function dns_full() {
                 fi
                 read -p "Please enter your GoDaddy API Key: " v
                 cred_set "GODADDY_API_KEY" "$v"
-                read -s -p "Please enter your GoDaddy API Secret: " v; echo
+                read_secret "Please enter your GoDaddy API Secret: " v; echo
                 cred_set "GODADDY_API_SECRET" "$v"
                 . "$CREDS"; return
                 ;;
@@ -617,7 +641,7 @@ function dns_full() {
                         . "$CREDS"; return
                     fi
                 fi
-                read -s -p "Please enter your Scannet API Key: " v; echo
+                read_secret "Please enter your Scannet API Key: " v; echo
                 cred_set "SCANNET_API_KEY" "$v"
                 . "$CREDS"; return
                 ;;
@@ -1001,7 +1025,7 @@ function notifications_menu() {
                 [[ -n "$v" ]] && config_set "smtp_to" "$v"
                 read -p "Auth username (blank to keep current): " v
                 [[ -n "$v" ]] && config_set "smtp_user" "$v"
-                read -s -p "Auth password (blank to keep current): " v; echo
+                read_secret "Auth password (blank to keep current): " v; echo
                 [[ -n "$v" ]] && cred_set "smtp_password" "$v"
                 echo "SMTP settings saved."
                 . "$CONFIG"
