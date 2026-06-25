@@ -60,8 +60,11 @@ function read_secret() {
 function migrate_renewal_list() {
     local list="/etc/tz-bot/scripts/renewal_list"
     [[ ! -f "$list" ]] && return 0
-    # Detect v4-format entries by the presence of --kid (without the eab. prefix)
-    if ! grep -q ' --kid ' "$list" 2>/dev/null; then
+    if ! grep -q 'lego' "$list"; then 
+        return 0
+    fi
+    # All lego entries already have 'lego run' → already v5
+    if ! grep 'lego' "$list" | grep -qv ' lego run '; then 
         return 0
     fi
     echo "Migrating renewal list from lego v4 to v5 format..."
