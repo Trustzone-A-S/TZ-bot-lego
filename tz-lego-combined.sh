@@ -71,7 +71,7 @@ function migrate_renewal_list() {
     local tmpfile
     tmpfile=$(mktemp)
     while IFS= read -r line; do
-        if echo "$line" | grep -q ' --kid '; then
+        if echo "$line" | grep -q 'lego' && ! echo "$line" | grep -q ' lego run '; then
             # 1. Reformat EAB flags: --kid → --eab.kid, --hmac → --eab.hmac
             line=$(echo "$line" | sed 's/ --kid / --eab.kid /g; s/ --hmac / --eab.hmac /g')
             # 2. Move subcommand: insert 'run' directly after 'lego' (before any flags)
