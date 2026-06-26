@@ -58,46 +58,99 @@ function read_secret() {
     printf -v "$varname" '%s' "$value"
 }
 function migrate_renewal_list() {
+    # ── Phase 1: Renewal list — v4 → v5 format ───────────────────────────────
     local list="/etc/tz-bot/scripts/renewal_list"
-    [[ ! -f "$list" ]] && return 0
-    if ! grep -q 'lego' "$list"; then 
-        return 0
-    fi
-    # All lego entries already have 'lego run' → already v5
-    if ! grep 'lego' "$list" | grep -qv ' lego run '; then 
-        return 0
-    fi
-    echo "Migrating renewal list from lego v4 to v5 format..."
-    local tmpfile
-    tmpfile=$(mktemp)
-    while IFS= read -r line; do
-        if echo "$line" | grep -q 'lego' && ! echo "$line" | grep -q ' lego run '; then
-            # 1. Reformat EAB flags: --kid → --eab.kid, --hmac → --eab.hmac
-            line=$(echo "$line" | sed 's/ --kid / --eab.kid /g; s/ --hmac / --eab.hmac /g')
-            # 2. Move subcommand: insert 'run' directly after 'lego' (before any flags)
-            #    Guards against double-inserting if 'lego run' is already present.
-            if ! echo "$line" | grep -q ' lego run '; then
+    if [[ -f "$list" ]] && grep -q 'lego' "$list" 2>/dev/null && \
+       grep 'lego' "$list" | grep -qv ' lego run '; then
+        echo "Migrating renewal list from lego v4 to v5 format..."
+        local tmpfile
+        tmpfile=$(mktemp)
+        while IFS= read -r line; do
+            if echo "$line" | grep -q 'lego' && ! echo "$line" | grep -q ' lego run '; then
+                line=$(echo "$line" | sed 's/ --kid / --eab.kid /g; s/ --hmac / --eab.hmac /g')
+                line=$(echo "$line" | sed 's/ --email [^ ]*//g')
                 line=$(echo "$line" | sed 's/ lego / lego run /')
+                line=$(echo "$line" | sed 's/ renew --days [0-9][0-9]*//')
+                line=$(echo "$line" | sed 's/--renew-hook=/--deploy-hook=/g')
+                line=$(echo "$line" | sed \
+                    "s|--server='https://emea.acme.atlas.globalsign.com/directory'|--server=globalsign|g
+                     s|--server='https://acme.sectigo.com/v2/DV'|--server=sectigo|g
+                     s|--server='https://acme.sectigo.com/v2/OV'|--server=sectigoov|g")
+                line=$(echo "$line" | sed "s/--server='\([^']*\)'/--server=\1/g")
             fi
-            # 3. Remove the v4 trailing 'renew --days N' subcommand
-            line=$(echo "$line" | sed 's/ renew --days [0-9][0-9]*//')
-            # 4. Update hook flag name
-            line=$(echo "$line" | sed 's/--renew-hook=/--deploy-hook=/g')
-            # 5. Map known CA URLs to their v5 shorthand aliases
-            line=$(echo "$line" | sed \
-                "s|--server='https://emea.acme.atlas.globalsign.com/directory'|--server=globalsign|g
-                 s|--server='https://acme.sectigo.com/v2/DV'|--server=sectigo|g
-                 s|--server='https://acme.sectigo.com/v2/OV'|--server=sectigoov|g")
-            # 6. Strip any remaining literal quotes around --server value (fallback)
-            line=$(echo "$line" | sed "s/--server='\([^']*\)'/--server=\1/g")
-            # 7. Remove --email argument
-            line=$(echo "$line" | sed 's/ --email [^ ]*//g')
+            printf '%s\n' "$line"
+        done < "$list" > "$tmpfile"
+        mv "$tmpfile" "$list" && chmod 600 "$list"
+        echo "Renewal list migrated to v5 format successfully."
+    fi
+
+    # ── Phase 2: Old per-setting files → consolidated CONFIG ─────────────────
+    local cfg_migrated=0
+    local v
+    if [ -f "/etc/tz-bot/scripts/.ca" ]; then
+        v=$(grep "^selected_ca=" /etc/tz-bot/scripts/.ca | cut -d= -f2-)
+        [ -n "$v" ] && config_set "selected_ca" "$v" && (( cfg_migrated++ ))
+    fi
+    if [ -f "/etc/tz-bot/scripts/storage" ]; then
+        v=$(grep "^path=" /etc/tz-bot/scripts/storage | cut -d= -f2-)
+        [ -n "$v" ] && config_set "cert_path" "$v" && (( cfg_migrated++ ))
+    fi
+    if [ -f "/etc/tz-bot/scripts/notifications.sh" ]; then
+        v=$(grep "^notifications=" /etc/tz-bot/scripts/notifications.sh | cut -d= -f2-)
+        [ -n "$v" ] && config_set "notifications" "$v" && (( cfg_migrated++ ))
+    fi
+    (( cfg_migrated > 0 )) && echo "Config migration: $cfg_migrated setting(s) moved to consolidated config."
+
+    # ── Phase 3: Old per-provider credential files → consolidated CREDS ──────
+    # Parses every  export KEY="value"  line in each old file and writes it
+    # into CREDS via cred_set (which safely upserts, never duplicates).
+    local cred_migrated=0
+    local old_cred_file
+    for old_cred_file in \
+        /etc/tz-bot/scripts/.user_credentials \
+        /etc/tz-bot/scripts/.azure_credentials \
+        /etc/tz-bot/scripts/.aws_credentials \
+        /etc/tz-bot/scripts/.cloudflare_credentials \
+        /etc/tz-bot/scripts/.domeneshop_credentials \
+        /etc/tz-bot/scripts/.infoblox_credentials \
+        /etc/tz-bot/scripts/.godaddy_credentials \
+        /etc/tz-bot/scripts/.scannet_credentials; do
+        [ ! -f "$old_cred_file" ] && continue
+        while IFS= read -r line; do
+            [[ -z "$line" || "$line" == \#* ]] && continue
+            if [[ "$line" =~ ^export[[:space:]]+([A-Za-z_][A-Za-z0-9_]*)=\"(.*)\"[[:space:]]*$ ]]; then
+                cred_set "${BASH_REMATCH[1]}" "${BASH_REMATCH[2]}"
+                (( cred_migrated++ ))
+            fi
+        done < "$old_cred_file"
+    done
+    (( cred_migrated > 0 )) && echo "Credential migration: $cred_migrated key(s) moved to consolidated credentials file."
+
+    # ── Phase 4: Remove all obsolete files ───────────────────────────────────
+    local cleaned=0
+    local f
+    for f in \
+        /etc/tz-bot/scripts/.ca \
+        /etc/tz-bot/scripts/storage \
+        /etc/tz-bot/scripts/notifications.sh \
+        /etc/tz-bot/scripts/.user_credentials \
+        /etc/tz-bot/scripts/.azure_credentials \
+        /etc/tz-bot/scripts/.aws_credentials \
+        /etc/tz-bot/scripts/.cloudflare_credentials \
+        /etc/tz-bot/scripts/.domeneshop_credentials \
+        /etc/tz-bot/scripts/.infoblox_credentials \
+        /etc/tz-bot/scripts/.godaddy_credentials \
+        /etc/tz-bot/scripts/.scannet_credentials \
+        /etc/tz-bot/scripts/renewal_force.sh \
+        /etc/tz-bot/scripts/renew_single.sh \
+        /etc/tz-bot/scripts/renew_temp.sh \
+        /etc/tz-bot/scripts/renew_single_list; do
+        if [ -f "$f" ]; then
+            rm -f "$f"
+            (( cleaned++ ))
         fi
-        printf '%s\n' "$line"
-    done < "$list" > "$tmpfile"
-    mv "$tmpfile" "$list"
-    chmod 600 "$list"
-    echo "Renewal list migrated to v5 format successfully."
+    done
+    (( cleaned > 0 )) && echo "Legacy cleanup: $cleaned obsolete file(s) removed."
 }
 
 function upkeep() {
@@ -224,6 +277,9 @@ function upkeep() {
         install -m 600 /dev/null "/etc/tz-bot/scripts/renewal_hook.sh"
         chmod +x "/etc/tz-bot/scripts/renewal_hook.sh"
     fi
+    # Run migration unconditionally — handles any leftover v1 files regardless
+    # of whether lego was just upgraded or was already at v5.
+    migrate_renewal_list
     # Regenerate notify.sh if it predates --show-error (no curl error detail on failure)
     if ! grep -q "show-error" /etc/tz-bot/scripts/notify.sh 2>/dev/null; then
         rm -f /etc/tz-bot/scripts/notify.sh
