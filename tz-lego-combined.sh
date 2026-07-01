@@ -399,6 +399,10 @@ fi
 
 run_cmd() {
     local cmd="$1"
+    # Ensure sudo preserves the PATH we exported — sudo strips the environment
+    # by default, so lego in /usr/local/bin won't be found without -E.
+    # sed matches 'sudo ' not already followed by '-' to avoid duplicating -E.
+    cmd=$(echo "$cmd" | sed 's/sudo \([^-]\)/sudo -E \1/g')
     local domain cert_path cert_domain cert_file log_excerpt
     domain=$(echo "$cmd"    | grep -o -- '--domains [^ ]*' | head -1 | awk '{print $2}')
     cert_path=$(echo "$cmd" | grep -o -- '--path [^ ]*'    | head -1 | awk '{print $2}')
