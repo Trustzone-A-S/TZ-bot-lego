@@ -21,8 +21,15 @@ function cronjob() {
                 ;;
             2)
                 read -p "Please enter the path to the script you want to use: " renewal_hook_script
+                if sudo bash $renewal_hook_script; then
+                    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
+                else
+                    echo "There was an error while running the script!"
+                    exit
+                fi
                 custom_renewhook="yes"
                 automatic_restart="no"
+                echo "Running script..."
                 ;;
             3)
                 echo -e "Proceeding using only automatic renewal of certificates."
@@ -90,7 +97,7 @@ version_gt() {
     [ "$(printf "%s\n%s\n" "$2" "$1" | sort -V | head -n1)" = "$2" ]
 }
 function upkeep() {
-    local_version="1.6.9"
+    local_version="1.7"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -764,11 +771,9 @@ function var_definition() {
     domain_renew_args="${domain_renew_args# }"
 
     domain_var="$domain_args --key-type rsa2048 run"
-    if [[ "$custom_renewhook" == "yes" ]]; then
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
-    else
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-    fi
+
+    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
