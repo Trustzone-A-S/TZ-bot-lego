@@ -21,6 +21,7 @@ function cronjob() {
                 ;;
             2)
                 read -p "Please enter the path to the script you want to use: " renewal_hook_script
+                echo "Running script..."
                 if sudo bash $renewal_hook_script; then
                     domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
                 else
@@ -29,7 +30,6 @@ function cronjob() {
                 fi
                 custom_renewhook="yes"
                 automatic_restart="no"
-                echo "Running script..."
                 ;;
             3)
                 echo -e "Proceeding using only automatic renewal of certificates."
