@@ -21,6 +21,13 @@ function cronjob() {
                 ;;
             2)
                 read -p "Please enter the path to the script you want to use: " renewal_hook_script
+                echo "Running script..."
+                if sudo bash $renewal_hook_script; then
+                    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='sudo bash $renewal_hook_script'"
+                else
+                    echo "There was an error while running the script!"
+                    exit
+                fi
                 custom_renewhook="yes"
                 automatic_restart="no"
                 ;;
@@ -103,7 +110,7 @@ function upkeep() {
         lego_var="lego"
     fi
     
-    local_version="1.6.8"
+    local_version="1.6.9"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -776,11 +783,9 @@ function var_definition() {
     domain_renew_args="${domain_renew_args# }"
 
     domain_var="$domain_args --key-type rsa2048 run"
-    if [[ "$custom_renewhook" == "yes" ]]; then
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='$SUDO bash $renewal_hook_script'"
-    else
-        domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='$SUDO bash /etc/tz-bot/scripts/renewal_hook.sh'"
-    fi
+
+    domain_renew_var="$domain_renew_args --key-type rsa2048 renew --days 30 --renew-hook='$SUDO bash /etc/tz-bot/scripts/renewal_hook.sh'"
+
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
