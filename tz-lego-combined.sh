@@ -470,7 +470,33 @@ function cronjob() {
                     1)
                         custom_renewhook="no"
                         automatic_restart="yes"
-                        break
+                        while true; do
+                            echo -e "\nWhich web server are you using?"
+                            echo "1: Apache"
+                            echo "2: Nginx"
+                            echo "3: Other"
+                            read -p "Enter choice [1-3]: " server_type
+                            case $server_type in
+                                1)
+                                    server="apache2"
+                                    echo -e "\nApache selected"
+                                    return
+                                    ;;
+                                2)
+                                    server="nginx"
+                                    echo -e "\nNginx selected"
+                                    return
+                                    ;;
+                                3)
+                                    server="other"
+                                    echo -e "\nOther selected"
+                                    return
+                                    ;;
+                                *)
+                                    echo "Error: Please only enter numbers in the range 1-3."
+                                    ;;
+                            esac
+                        done
                         ;;
                     2)
                         read -p "Please enter the path to the script you want to use: " renewal_hook_script
@@ -496,46 +522,59 @@ function cronjob() {
 }
 function auto_reload() {
     while true; do
-        echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?"
-        echo "1. sudo systemctl reload $server"
-        echo "2. sudo service $server reload"
-        echo "3. [NGINX ONLY] sudo /etc/init.d/nginx reload"
-        echo "4. [APACHE ONLY] sudo /etc/init.d/apache2 reload"
-        echo "5. Use a custom command"
-        read -p "Enter choice [1-5]: " reload_choice
-        case $reload_choice in
-            1) reload_command="sudo systemctl reload $server" ;;
-            2) reload_command="sudo service $server reload" ;;
-            3) reload_command="sudo /etc/init.d/nginx reload" ;;
-            4) reload_command="sudo /etc/init.d/apache2 reload" ;;
-            5) echo "" && read -p "Enter reload command: " reload_command ;;
-            *)
-                echo "Error: Please only enter numbers in the range 1-5."
-                continue
-                ;;
-        esac
-        echo ""
-        echo "Attempting to reload server using command: $reload_command"
-        if bash -c "$reload_command"; then
-            echo "Web server reloaded successfully."
-            sudo sed -i.bak "\#${reload_command}#d" /etc/tz-bot/scripts/renewal_hook.sh
-            echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
-            break
-        else
-            echo "Failed to reload using: '$reload_command'"
-            echo ""
-            if yn_prompt "Would you like to try another reload command?"; then
-                continue
-            else
-                if yn_prompt "Add command to renewal hook despite failing?"; then
-                    sudo sed -i.bak "\#${reload_command}#d" /etc/tz-bot/scripts/renewal_hook.sh
-                    echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
-                else
-                    echo "" && echo "Automatic server reloading cancelled."
+        if [[ "$server" != "other" ]]; then
+            echo -e "\nWhat command would you like to use for reloading your webserver upon installation/renewals?"
+            echo "1. sudo systemctl reload $server"
+            echo "2. sudo service $server reload"
+                if [[ "$server" = "nginx" ]]; then
+                    echo "3. [NGINX ONLY] sudo /etc/init.d/nginx reload"; echo "4. Use a custom command"
+                    read -p "Enter choice [1-4]: " reload_choice
+                    case $reload_choice in
+                        1) reload_command="sudo systemctl reload $server" ;;
+                        2) reload_command="sudo service $server reload" ;;
+                        3) reload_command="sudo /etc/init.d/nginx reload" ;;
+                        4) echo "" && read -p "Enter reload command: " reload_command ;;
+                        *) echo "Error: Please only enter numbers in the range 1-4."; continue ;;
+                    esac
                 fi
-                break
-            fi
+                if [[ "$server" = "apache2" ]]; then
+                    echo "3. [APACHE ONLY] sudo /etc/init.d/apache2 reload"; echo "4. Use a custom command"
+                    read -p "Enter choice [1-4]: " reload_choice
+                    case $reload_choice in
+                        1) reload_command="sudo systemctl reload $server" ;;
+                        2) reload_command="sudo service $server reload" ;;
+                        3) reload_command="sudo /etc/init.d/apache2 reload" ;;
+                        4) echo "" && read -p "Enter reload command: " reload_command ;;
+                        *) echo "Error: Please only enter numbers in the range 1-4."; continue ;;
+                    esac
+                fi
         fi
+        if [[ "$server" = "other" ]]; then
+            echo -e "\nPlease input your desired reload command: "
+            read -p "Enter reload command: " reload_command
+        fi
+            echo ""
+            echo "Attempting to reload server using command: $reload_command"
+            if bash -c "$reload_command"; then
+                echo "Web server reloaded successfully."
+                sudo sed -i.bak "\#${reload_command}#d" /etc/tz-bot/scripts/renewal_hook.sh
+                echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                break
+            else
+                echo "Failed to reload using: '$reload_command'"
+                echo ""
+                if yn_prompt "Would you like to try another reload command?"; then
+                    continue
+                else
+                    if yn_prompt "Add command to renewal hook despite failing?"; then
+                        sudo sed -i.bak "\#${reload_command}#d" /etc/tz-bot/scripts/renewal_hook.sh
+                        echo "$reload_command" >> /etc/tz-bot/scripts/renewal_hook.sh
+                    else
+                        echo "" && echo "Automatic server reloading cancelled."
+                    fi
+                    break
+                fi
+            fi
     done
 }
 function uninstall() {
@@ -831,33 +870,6 @@ function validation() {
         fi
     done
 }
-function new_cert() {
-    while true; do
-        echo -e "\nWhich web server are you using?"
-        echo "1: Apache"
-        echo "2: Nginx"
-        echo "Tip: If you don't see your service/server here, simply select any of the two."
-        echo "     It is only used for recommending reload commands later, and you will have the option to use a custom command."
-        read -p "Enter choice [1-2]: " server_type
-        case $server_type in
-            1)
-                val_var="--apache" && server="apache2"
-                echo -e "\nApache selected"
-                validation
-                return
-                ;;
-            2)
-                val_var="--nginx" && server="nginx"
-                echo -e "\nNginx selected"
-                validation
-                return
-                ;;
-            *)
-                echo "Error: Please only enter numbers in the range 1-2."
-                ;;
-        esac
-    done
-}
 function renewal_management() {
     while true; do
         echo -e "\nRenewal management:"
@@ -883,7 +895,7 @@ function renewal_management() {
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
                     echo -e "\nNo renewals found."
                 else
-                    echo "\nRunning renewal script..."
+                    echo -e "\nRunning renewal script..."
                     sudo bash /etc/tz-bot/scripts/renewal.sh normal
                 fi
                 ;;
@@ -891,7 +903,7 @@ function renewal_management() {
                 if ! grep -q "lego" "/etc/tz-bot/scripts/renewal_list"; then
                     echo -e "\nNo renewals found."
                 else
-                    echo "\nForce-renewing all certificates..."
+                    echo -e "\nForce-renewing all certificates..."
                     sudo bash /etc/tz-bot/scripts/renewal.sh force
                 fi
                 ;;
@@ -970,7 +982,7 @@ function renewal_management() {
                         if sudo lego certificates revoke --server "$selected_ca" --cert.name "${revoke_domain}"  --path "$revoke_path" --reason 0; then
                             echo -e "Your certificate has been revoked. NOTE: The domain is still in the renewal list.\nIf you want to stop future renewals, make sure to remove the renewal in the renewal management menu!"
                         else
-                            echo "An error has occured. Please contact support@†rustzone.com"
+                            echo "An error has occured. Please contact support@trustzone.com"
                         fi
                     else
                         echo "Revocation cancelled"
@@ -1150,7 +1162,7 @@ function cert_menu() {
         read -p "Enter choice [1-3]: " cert_menu_choice
         case $cert_menu_choice in
             1)
-                new_cert
+                validation
                 ;;
             2)
                 renewal_management
