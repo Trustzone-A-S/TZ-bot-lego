@@ -1188,6 +1188,8 @@ function cert_menu() {
     done
 }
 function start_prompt() {
+    echo "TZ-Bot V.2 is a major release that reshapes a lot of the underlying systems in the client. It also consolidates a lot of credential files and scripts, using less files overall."
+    echo "If you find any bugs or encounter any problems at all, please reach out to support@trustzone.com"
     while true; do
         echo -e "\nMain Menu Options:"
         echo "1. Certificates & Renewals"
