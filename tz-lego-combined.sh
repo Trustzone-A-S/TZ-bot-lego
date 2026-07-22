@@ -403,6 +403,16 @@ run_cmd() {
     # by default, so lego in /usr/local/bin won't be found without -E.
     # sed matches 'sudo ' not already followed by '-' to avoid duplicating -E.
     cmd=$(echo "$cmd" | sed 's/sudo \([^-]\)/sudo -E \1/g')
+    # If the command has --eab but is missing --eab.kid, the EAB credentials
+    # were sourced externally in v1 rather than stored inline. Inject them
+    # from the credentials file which was already sourced at the top.
+    if echo "$cmd" | grep -q ' --eab' && ! echo "$cmd" | grep -q ' --eab.kid'; then
+        if [[ -n "$eab_kid" && -n "$eab_hmac" ]]; then
+            cmd=$(echo "$cmd" | sed "s/ --eab / --eab --eab.kid $eab_kid --eab.hmac $eab_hmac /")
+        else
+            echo "Warning: --eab.kid and --eab.hmac missing from command and not found in credentials file." >&2
+        fi
+    fi
     local domain cert_path cert_domain cert_file log_excerpt
     domain=$(echo "$cmd"    | grep -o -- '--domains [^ ]*' | head -1 | awk '{print $2}')
     cert_path=$(echo "$cmd" | grep -o -- '--path [^ ]*'    | head -1 | awk '{print $2}')
@@ -497,6 +507,7 @@ function cronjob() {
                                     ;;
                             esac
                         done
+                        break
                         ;;
                     2)
                         read -p "Please enter the path to the script you want to use: " renewal_hook_script
