@@ -1034,7 +1034,7 @@ function ordering() {
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
     local cert_domain="${domain//\*./_.}"
     local cert_file="${cert_path}/certificates/${cert_domain}.crt"
-    echo "LEGO command: sudo ${lego_cmd[*]}"
+    #echo "LEGO command: sudo ${lego_cmd[*]}"
     if sudo "${lego_cmd[@]}"; then
         bash /etc/tz-bot/scripts/notify.sh success "$domain" "$cert_file" &
         cronjob
