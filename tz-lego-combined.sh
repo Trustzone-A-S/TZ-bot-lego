@@ -1166,8 +1166,8 @@ function settings_menu() {
                 uninstall
                 ;;
             4)
-                echo "This will attempt to migrate your account to the new version of Lego."
-                echo "Please do not use this function without instruction!"
+                echo -e "\nThis will attempt to migrate your account to the new version of Lego."
+                echo -e "Please do not use this function without instruction!\n"
                 if yn_prompt "continue?"; then
                     migrate_account_key
                 fi
