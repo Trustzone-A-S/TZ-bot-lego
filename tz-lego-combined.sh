@@ -154,7 +154,7 @@ function migrate_renewal_list() {
 }
 
 function upkeep() {
-    local_version="2.0"
+    local_version="2.0.1"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
