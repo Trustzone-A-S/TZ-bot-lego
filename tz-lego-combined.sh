@@ -764,6 +764,19 @@ function dns_full() {
         esac
     done
 }
+function migrate_account_key() {
+    echo "Attempting to migrate key manually..."
+        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key; then
+            echo "key migrated successfully."
+        else
+            echo "error migrating key"
+        fi
+        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json; then
+            echo "account.json migrated successfully"
+        else
+            echo "error migrating account.json"
+        fi
+}
 function path_selection() {
     while true; do
         read -p "Please enter the full path to save the certificates (e.g., /etc/tz-bot/certs): " custom_path
@@ -1138,8 +1151,9 @@ function settings_menu() {
         echo "1. CA selection"
         echo "2. Notifications"
         echo "3. Uninstall TZ-Bot and Lego"
-        echo "4. Help"
-        echo "5. Back"
+        echo "4. Lego 5.2.2 manual key/account migration"
+        echo "5. Help"
+        echo "6. Back"
         read -p "Enter choice [1-5]: " settings_menu_choice
         case $settings_menu_choice in
             1)
@@ -1152,10 +1166,17 @@ function settings_menu() {
                 uninstall
                 ;;
             4)
+                echo "This will attempt to migrate your account to the new version of Lego."
+                echo "Please do not use this function without instruction!"
+                if yn_prompt "continue?"; then
+                    migrate_account_key
+                fi
+                ;;
+            5)
                 echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
                 echo "support@trustzone.com"
                 ;;
-            5)
+            6)
                 break
                 ;;
             *)
