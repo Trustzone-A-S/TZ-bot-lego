@@ -58,6 +58,17 @@ function read_secret() {
     printf -v "$varname" '%s' "$value"
 }
 function migrate_renewal_list() {
+    echo "Attempting to migrate key manually..."
+        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key; then
+            echo "key migrated successfully."
+        else
+            echo "error migrating key"
+        fi
+        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json; then
+            echo "account.json migrated successfully"
+        else
+            echo "error migrating account.json"
+        fi
     # ── Phase 1: Renewal list — v4 → v5 format ───────────────────────────────
     local list="/etc/tz-bot/scripts/renewal_list"
     if [[ -f "$list" ]] && grep -q 'lego' "$list" 2>/dev/null && \
