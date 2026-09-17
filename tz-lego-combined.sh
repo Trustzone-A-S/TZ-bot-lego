@@ -58,17 +58,27 @@ function read_secret() {
     printf -v "$varname" '%s' "$value"
 }
 function migrate_renewal_list() {
-    echo "Attempting to migrate key manually..."
-        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key; then
-            echo "key migrated successfully."
-        else
-            echo "error migrating key"
+    local legacy_key_src="accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key"
+    local legacy_key_dst="accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key"
+    local legacy_json_src="accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json"
+    local legacy_json_dst="accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json"
+    if sudo test -e "$legacy_key_src" || sudo test -e "$legacy_json_src"; then
+        echo "Attempting to migrate key manually..."
+        if sudo test -e "$legacy_key_src"; then
+            if sudo mv "$legacy_key_src" "$legacy_key_dst"; then
+                echo "key migrated successfully."
+            else
+                echo "error migrating key"
+            fi
         fi
-        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json; then
-            echo "account.json migrated successfully"
-        else
-            echo "error migrating account.json"
+        if sudo test -e "$legacy_json_src"; then
+            if sudo mv "$legacy_json_src" "$legacy_json_dst"; then
+                echo "account.json migrated successfully"
+            else
+                echo "error migrating account.json"
+            fi
         fi
+    fi
     # ── Phase 1: Renewal list — v4 → v5 format ───────────────────────────────
     local list="/etc/tz-bot/scripts/renewal_list"
     if [[ -f "$list" ]] && grep -q 'lego' "$list" 2>/dev/null && \
@@ -165,7 +175,7 @@ function migrate_renewal_list() {
 }
 
 function upkeep() {
-    local_version="2.0.2"
+    local_version="2.0.3"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -826,11 +836,7 @@ function var_definition() {
     domain_args="${domain_args# }"
     domain_renew_args="${domain_renew_args# }"
     domain_var="$domain_args --key-type rsa2048"
-    if [[ "$custom_renewhook" == "yes" ]]; then
-        domain_renew_var="$domain_renew_args --key-type rsa2048 --deploy-hook='sudo bash $renewal_hook_script'"
-    else
-        domain_renew_var="$domain_renew_args --key-type rsa2048 --deploy-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-    fi
+    domain_renew_var="$domain_renew_args --key-type rsa2048"
     renewal="no"
     echo
     if yn_prompt "Do you want to specify where the certificate is saved?"; then
@@ -1073,7 +1079,13 @@ function ordering() {
         if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
-            local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var)
+            local deploy_hook_var
+            if [[ "$custom_renewhook" == "yes" ]]; then
+                deploy_hook_var="--deploy-hook='sudo bash $renewal_hook_script'"
+            else
+                deploy_hook_var="--deploy-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
+            fi
+            local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var $deploy_hook_var)
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
             echo "sudo ${lego_cmd_renew[*]}" >> /etc/tz-bot/scripts/renewal_list
         fi
