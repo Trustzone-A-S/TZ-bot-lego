@@ -175,7 +175,7 @@ function migrate_renewal_list() {
 }
 
 function upkeep() {
-    local_version="2.0.3"
+    local_version="2.0.4"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -422,8 +422,9 @@ run_cmd() {
     local cmd="$1"
     # Ensure sudo preserves the PATH we exported — sudo strips the environment
     # by default, so lego in /usr/local/bin won't be found without -E.
-    # sed matches 'sudo ' not already followed by '-' to avoid duplicating -E.
-    cmd=$(echo "$cmd" | sed 's/sudo \([^-]\)/sudo -E \1/g')
+    # Anchored to the start of the line so this only touches the leading
+    # 'sudo lego ...' invocation, not any 'sudo /path' inside --deploy-hook.
+    cmd=$(echo "$cmd" | sed 's/^sudo \([^-]\)/sudo -E \1/')
     # If the command has --eab but is missing --eab.kid, the EAB credentials
     # were sourced externally in v1 rather than stored inline. Inject them
     # from the credentials file which was already sourced at the top.
@@ -532,6 +533,11 @@ function cronjob() {
                         ;;
                     2)
                         read -p "Please enter the path to the script you want to use: " renewal_hook_script
+                        if sudo test -e "$renewal_hook_script"; then
+                            sudo chmod +x "$renewal_hook_script"
+                        else
+                            echo "Warning: $renewal_hook_script does not exist yet. Make sure it exists and starts with a shebang (e.g. #!/bin/bash) before the next renewal runs, or the deploy hook will fail."
+                        fi
                         custom_renewhook="yes"
                         automatic_restart="no"
                         break
@@ -1061,13 +1067,22 @@ function ca_selection() {
     done
 }
 function ordering() {
+    cronjob
+    local deploy_hook_var deploy_hook_var_stored
+    if [[ "$custom_renewhook" == "yes" ]]; then
+        deploy_hook_var="--deploy-hook=sudo $renewal_hook_script"
+        deploy_hook_var_stored="--deploy-hook='sudo $renewal_hook_script'"
+    else
+        deploy_hook_var="--deploy-hook=sudo /etc/tz-bot/scripts/renewal_hook.sh"
+        deploy_hook_var_stored="--deploy-hook='sudo /etc/tz-bot/scripts/renewal_hook.sh'"
+    fi
     local lego_cmd=($lego_var $registration $val_var $path_var $eab $domain_var)
+    lego_cmd+=("$deploy_hook_var")
     local cert_domain="${domain//\*./_.}"
     local cert_file="${cert_path}/certificates/${cert_domain}.crt"
     #echo "LEGO command: sudo ${lego_cmd[*]}"
     if sudo "${lego_cmd[@]}"; then
         bash /etc/tz-bot/scripts/notify.sh success "$domain" "$cert_file" &
-        cronjob
     else
         echo -e "\nThere was a problem with the certificate request. Please check your credentials and domain validation."
         echo "You can also contact TRUSTZONE support at support@trustzone.com"
@@ -1079,13 +1094,8 @@ function ordering() {
         if sudo grep -qF -- "--domains $domain" "/etc/tz-bot/scripts/renewal_list"; then
             echo "Renewal for $domain already exists in renewal list. Skipping addition."
         else
-            local deploy_hook_var
-            if [[ "$custom_renewhook" == "yes" ]]; then
-                deploy_hook_var="--deploy-hook='sudo bash $renewal_hook_script'"
-            else
-                deploy_hook_var="--deploy-hook='sudo bash /etc/tz-bot/scripts/renewal_hook.sh'"
-            fi
-            local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var $deploy_hook_var)
+            local lego_cmd_renew=($lego_var $registration $val_var $path_var $eab $domain_renew_var)
+            lego_cmd_renew+=("$deploy_hook_var_stored")
             echo "Updating renewal list at: /etc/tz-bot/scripts/renewal_list"
             echo "sudo ${lego_cmd_renew[*]}" >> /etc/tz-bot/scripts/renewal_list
         fi
