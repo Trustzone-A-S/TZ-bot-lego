@@ -173,9 +173,8 @@ function migrate_renewal_list() {
     done
     (( cleaned > 0 )) && echo "Legacy cleanup: $cleaned obsolete file(s) removed."
 }
-
 function upkeep() {
-    local_version="2.0.4"
+    local_version="2.0.5"
     if [ "$(id -u)" -ne 0 ]; then
         echo 'This script must be run by root' >&2
         exit 1
@@ -792,17 +791,87 @@ function dns_full() {
     done
 }
 function migrate_account_key() {
+    . "$CONFIG"
+    local base_path="${cert_path:-/etc/tz-bot/certs}"
+    base_path="${base_path%/}"
+    local legacy_key_src="$base_path/accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key"
+    local legacy_key_dst="$base_path/accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key"
+    local legacy_json_src="$base_path/accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json"
+    local legacy_json_dst="$base_path/accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json"
+    if ! sudo test -e "$legacy_key_src" && ! sudo test -e "$legacy_json_src"; then
+        echo "No legacy account files found to migrate in $base_path/accounts"
+        return
+    fi
     echo "Attempting to migrate key manually..."
-        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/test123@test.com.key accounts/emea.acme.atlas.globalsign.com/noemail@example.com/noemail@example.com.key; then
+    if sudo test -e "$legacy_key_src"; then
+        if sudo mv "$legacy_key_src" "$legacy_key_dst"; then
             echo "key migrated successfully."
         else
             echo "error migrating key"
         fi
-        if sudo mv accounts/emea.acme.atlas.globalsign.com/test123@test.com/account.json accounts/emea.acme.atlas.globalsign.com/noemail@example.com/account.json; then
+    fi
+    if sudo test -e "$legacy_json_src"; then
+        if sudo mv "$legacy_json_src" "$legacy_json_dst"; then
             echo "account.json migrated successfully"
         else
             echo "error migrating account.json"
         fi
+    fi
+}
+function reset_account() {
+    . "$CONFIG"
+    local base_path="${cert_path:-/etc/tz-bot/certs}"
+    if yn_prompt "Use a different lego path than $base_path?"; then
+        read -p "Please enter the path: " base_path
+    fi
+    base_path="${base_path%/}"
+    local accounts_dir="$base_path/accounts"
+    local -a acct_dirs=()
+    local f
+    # Lego stores accounts as <path>/accounts/<server>/<email>/{account.json,<email>.key}
+    while IFS= read -r -d '' f; do
+        acct_dirs+=("$(dirname "$f")")
+    done < <(sudo find "$accounts_dir" -mindepth 3 -maxdepth 3 -type f -name 'account.json' -print0 2>/dev/null | sort -z)
+    if (( ${#acct_dirs[@]} == 0 )); then
+        echo -e "\nNo lego accounts found in $accounts_dir"
+        return
+    fi
+    echo -e "\nLego accounts found in $accounts_dir:"
+    local i
+    for i in "${!acct_dirs[@]}"; do
+        echo "$((i+1)). ${acct_dirs[$i]#"$accounts_dir"/}"
+    done
+    local sel
+    local -a targets=()
+    while true; do
+        read -p "Enter the NUMBER of the account to reset, 'a' for all accounts, or 'c' to cancel: " sel
+        if [[ "$sel" =~ ^[cC]$ ]]; then
+            echo "Account reset cancelled."
+            return
+        elif [[ "$sel" =~ ^[aA]$ ]]; then
+            targets=("${acct_dirs[@]}")
+            break
+        elif [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#acct_dirs[@]} )); then
+            targets=("${acct_dirs[$((sel-1))]}")
+            break
+        else
+            echo "Error: Please enter a number between 1 and ${#acct_dirs[@]}, 'a' or 'c'."
+        fi
+    done
+    echo -e "\nThis will delete account.json and the account key for ${#targets[@]} account(s)."
+    echo "Lego will register a new account on the next order/renewal."
+    if yn_prompt "Are you sure you want to reset? This action is irreversible!"; then
+        local d
+        for d in "${targets[@]}"; do
+            if sudo find "$d" -maxdepth 1 -type f \( -name 'account.json' -o -name '*.key' \) -delete; then
+                echo "Account reset: ${d#"$accounts_dir"/}"
+            else
+                echo "Error resetting account: ${d#"$accounts_dir"/}"
+            fi
+        done
+    else
+        echo "Account reset cancelled."
+    fi
 }
 function path_selection() {
     while true; do
@@ -1185,9 +1254,10 @@ function settings_menu() {
         echo "2. Notifications"
         echo "3. Uninstall TZ-Bot and Lego"
         echo "4. Lego 5.2.2 manual key/account migration"
-        echo "5. Help"
-        echo "6. Back"
-        read -p "Enter choice [1-5]: " settings_menu_choice
+        echo "5. Reset lego account"
+        echo "6. Help"
+        echo "7. Back"
+        read -p "Enter choice [1-7]: " settings_menu_choice
         case $settings_menu_choice in
             1)
                 ca_selection
@@ -1206,14 +1276,17 @@ function settings_menu() {
                 fi
                 ;;
             5)
+                reset_account
+                ;;
+            6)
                 echo -e "\nFor support, feature requests and other inquiries, please contact TZ support at the following email address:"
                 echo "support@trustzone.com"
                 ;;
-            6)
+            7)
                 break
                 ;;
             *)
-                echo "Error: Please only enter numbers in the range 1-5."
+                echo "Error: Please only enter numbers in the range 1-7."
                 ;;
         esac
     done
@@ -1243,10 +1316,6 @@ function cert_menu() {
 }
 function start_prompt() {
     echo
-    echo "ATTENTION!!"
-    echo "TZ-Bot V.2 is a major release that reshapes a lot of the underlying systems in the client. It also consolidates a lot of credential files and scripts, using less files overall."
-    echo "The client it self, should look and feel exactly like before."
-    echo "If you find any bugs or encounter any problems at all, please reach out to support@trustzone.com"
     while true; do
         echo -e "\nMain Menu Options:"
         echo "1. Certificates & Renewals"
